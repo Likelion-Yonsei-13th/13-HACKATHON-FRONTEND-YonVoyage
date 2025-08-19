@@ -1,7 +1,18 @@
-@import "tailwindcss";
+:root {
+  --app-min-w: 320px;
+  --app-max-w: 430px; /* 아이폰 기준 폭 */
+}
 
-@layer base {
-  body {
-    @apply bg-white text-black;
-  }
+body {
+  background: rgb(255, 255, 255); /* 좌우 여백 흰색 */
+}
+
+/* 중앙에 앱 캔버스 */
+.app-shell {
+  max-width: var(--app-max-w);
+  min-width: var(--app-min-w);
+  margin-left: auto;
+  margin-right: auto;
+  min-height: 100dvh;
+  background: #d5eaff; /*일단 파랑으로 해둠*/
 }
