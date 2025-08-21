@@ -17,11 +17,12 @@ export default function OnboardingPage() {
   const [answers, setAnswers] = useState<AnswerMap>({});
   const Current = steps[i];
 
+  const isStep3 = i == 2;
   const isStep4 = i === 3; // Step4 화면
   const isLast = i === steps.length - 1;
 
   // Step4는 무조건 활성화, 그 외는 answers[i] 유무 체크
-  const isNextDisabled = isStep4 ? false : !Boolean(answers[i]);
+  const isNextDisabled = isStep3 || isStep4 ? false : !Boolean(answers[i]);
 
   return (
     <>
