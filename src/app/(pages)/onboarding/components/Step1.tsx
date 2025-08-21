@@ -19,9 +19,7 @@ export default function Step1({ value, onChange }: StepProps) {
             onClick={() => onChange(label)}
             className={[
               "block w-full rounded-lg border p-3 text-left hover:bg-gray-100 transition",
-              value === label
-                ? "bg-blue-500 text-white border-blue-600"
-                : "bg-white text-gray-700",
+              value === label ? "bg-gray-200 border-gray-500" : "bg-white",
             ].join(" ")}
           >
             {label}
