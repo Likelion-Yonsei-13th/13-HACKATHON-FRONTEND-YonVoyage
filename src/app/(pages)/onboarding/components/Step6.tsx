@@ -1,54 +1,51 @@
-// src/app/onboarding/components/Step5.tsx
+// src/app/(pages)/onboarding/components/Step6.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
+import type { StepProps } from "./types";
 
-export default function Step6({
-  value, // 시그니처만 맞춰둠 (안 써도 OK)
-  onChange, // 시그니처만 맞춰둠 (안 써도 OK)
-}: {
-  value?: string;
-  onChange: (v: string) => void;
-}) {
+export default function Step6(_: StepProps) {
   const router = useRouter();
 
-  const markDone = () => {
-    // 선택: 온보딩 완료 플래그 저장 (다음 접속 시 건너뛰기용)
-    try {
-      localStorage.setItem("onboarding_done", "1");
-    } catch {}
-  };
-
-  const goHome = () => {
-    markDone();
-    // 메인으로
-    router.replace("/"); // replace: 히스토리에 남기지 않고 교체
-  };
-
-  const goAIStudio = () => {
-    markDone();
-    // AI 스튜디오로
-    router.replace("/aistudio");
-  };
+  const Row = ({
+    children,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    onClick: () => void;
+  }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-gray-200 hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition"
+    >
+      {/* 체크표시 → 회색 고정 */}
+      <span className="text-lg text-gray-400">✓</span>
+      <span>{children}</span>
+    </button>
+  );
 
   return (
-    <section className="min-h-[60vh] flex flex-col justify-center gap-10">
-      <h2 className="text-2xl font-bold">픽플 이용하기</h2>
+    <section className="min-h-[60vh] flex flex-col items-center justify-center gap-8">
+      {/* 타이틀 */}
+      <h2 className="text-2xl font-bold text-white">픽플 이용하기</h2>
 
-      <div className="flex flex-col gap-4">
-        <button
-          onClick={goAIStudio}
-          className="h-12 rounded bg-gray-900 text-white"
-        >
-          더해볼래요!
-        </button>
-
-        <button
-          onClick={goHome}
-          className="h-12 rounded bg-gray-100 hover:bg-gray-200"
-        >
-          끝내기
-        </button>
+      {/* 카드 */}
+      <div
+        className="rounded-lg text-gray-200"
+        style={{
+          width: "454px",
+          height: "356px",
+          minWidth: "280px",
+          borderRadius: "12px",
+          backgroundColor: "rgba(33, 34, 37, 1)",
+          padding: "32px",
+        }}
+      >
+        <div className="space-y-3">
+          <Row onClick={() => router.push("/")}>끝내기</Row>
+          <Row onClick={() => router.push("/aistudio")}>더 해볼래요!</Row>
+        </div>
       </div>
     </section>
   );
