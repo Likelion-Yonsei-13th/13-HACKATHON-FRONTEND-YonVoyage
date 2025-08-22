@@ -1,57 +1,87 @@
-// app/onboarding/components/Step4.tsx
+// src/app/(pages)/onboarding/components/Step3.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import { generateOnboardingImage } from "@/app/_common/apis/onboarding";
+import { useState } from "react";
+import { uploadOnboardingImage } from "@/app/_common/apis/onboarding";
+import type { StepProps } from "./types";
 
-export default function Step4({
-  value, // 부모에서 넘겨준 값(여기서는 이전 단계의 uploadId가 넘어오게 설계)
-  onChange, // 결과 URL을 부모에 저장
-}: {
-  value?: string; // uploadId
-  onChange: (v: string) => void; // resultUrl 저장
-}) {
+/**
+ * Step3: 이미지 업로드
+ * - 로컬에서 파일 선택
+ * - 서버로 업로드 후 응답의 uploadId를 onChange로 부모에 전달
+ */
+export default function Step4({ value, onChange }: StepProps) {
+  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | undefined>(undefined);
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      if (!value) return; // uploadId가 아직 없으면 대기
+  const handleUpload = async () => {
+    if (!file || loading) return;
+    try {
       setLoading(true);
-      try {
-        const { resultUrl } = await generateOnboardingImage(value);
-        if (!mounted) return;
-        setResult(resultUrl);
-        onChange(resultUrl); // answers[3] = resultUrl
-      } catch (e) {
-        console.error(e);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [value, onChange]);
+      // 서버 API: 업로드 후 { uploadId } 반환한다고 가정
+      const { uploadId } = await uploadOnboardingImage(file);
+      onChange(uploadId); // answers[2] = uploadId
+    } catch (e) {
+      console.error(e);
+      alert("업로드에 실패했어요. 다시 시도해 주세요.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <section className="min-h-[60vh] flex flex-col justify-center gap-6">
-      <h2 className="text-xl font-semibold">변환된 이미지</h2>
+      <h2 className="text-xl font-semibold">내 음식사진 업로드</h2>
 
-      <div className="aspect-[4/3] w-full rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden">
-        {loading ? (
-          <span className="text-gray-500">생성 중...</span>
-        ) : result ? (
+      {/* 미리보기 영역 */}
+      <div className="aspect-[4/3] w-full rounded-xl bg-neutral-200/80 flex items-center justify-center overflow-hidden">
+        {file ? (
           <img
-            src={result}
-            alt="result"
+            src={URL.createObjectURL(file)}
+            alt="preview"
             className="h-full w-full object-cover"
           />
         ) : (
-          <span className="text-gray-500">아직 변환된 이미지가 없습니다</span>
+          <span className="text-neutral-500">
+            이미지를 선택하면 미리보기가 보여요
+          </span>
         )}
       </div>
+
+      {/* 파일 선택 + 업로드 버튼 */}
+      <div className="flex items-center gap-3">
+        <input
+          id="file"
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        />
+        <label
+          htmlFor="file"
+          className="inline-flex h-11 items-center justify-center rounded px-4 bg-neutral-100 hover:bg-neutral-200 cursor-pointer"
+        >
+          파일 선택
+        </label>
+
+        <span className="text-sm text-neutral-600 line-clamp-1">
+          {file?.name ?? "선택된 파일 없음"}
+        </span>
+
+        <button
+          type="button"
+          onClick={handleUpload}
+          disabled={!file || loading}
+          className="ml-auto h-11 px-5 rounded bg-neutral-900 text-white disabled:opacity-50"
+        >
+          {loading ? "업로드 중..." : "업로드"}
+        </button>
+      </div>
+
+      {/* 업로드가 된 상태(부모에 저장된 값) 표기 */}
+      {!!value && (
+        <p className="text-sm text-emerald-600">업로드 완료! ID: {value}</p>
+      )}
     </section>
   );
 }

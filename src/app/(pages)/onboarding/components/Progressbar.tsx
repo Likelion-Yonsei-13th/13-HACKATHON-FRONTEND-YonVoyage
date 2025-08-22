@@ -5,15 +5,18 @@ export default function ProgressBar({ current, total }: Props) {
 
   return (
     <div aria-label={`진행률 ${pct}%`} className="w-full">
-      <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+      {/* 진행 바 */}
+      <div className="h-2 w-full rounded-full bg-neutral-700 overflow-hidden">
         <div
-          className="h-full bg-gray-800 transition-[width] duration-300 ease-in-out"
+          className="h-full bg-emerald-500 transition-[width] duration-300 ease-in-out"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="mt-2 text-right text-xs text-gray-500">
+
+      {/* 진행 텍스트 */}
+      {/* <div className="mt-2 text-right text-xs text-neutral-400">
         {current + 1} / {total}
-      </div>
+      </div> */}
     </div>
   );
 }

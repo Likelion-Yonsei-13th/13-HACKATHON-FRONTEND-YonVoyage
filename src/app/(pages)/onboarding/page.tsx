@@ -7,69 +7,105 @@ import Step2 from "./components/Step2";
 import Step3 from "./components/Step3";
 import Step4 from "./components/Step4";
 import Step5 from "./components/Step5";
+import Step6 from "./components/Step6";
 import ProgressBar from "./components/Progressbar";
+import type { StepProps } from "./components/types";
 
-const steps = [Step1, Step2, Step3, Step4, Step5] as const;
+// 모든 스텝 컴포넌트는 value / onChange를 받는 형태
+const steps: Array<(p: StepProps) => JSX.Element> = [
+  Step1,
+  Step2,
+  Step3,
+  Step4,
+  Step5,
+  Step6,
+] as const;
+
+// 기본은 모두 필수(true). Step4, Step5는 선택 없이도 '다음' 가능(false).
+const required = steps.map(() => true);
+required[3] = false; // Step4
+required[4] = false; // Step5
+
 type AnswerMap = Record<number, string | undefined>;
 
 export default function OnboardingPage() {
   const [i, setI] = useState(0);
   const [answers, setAnswers] = useState<AnswerMap>({});
+
   const Current = steps[i];
-
-  const isStep3 = i == 2;
-  const isStep4 = i === 3; // Step4 화면
   const isLast = i === steps.length - 1;
+  const isStep4 = i === 3;
 
-  // Step4는 무조건 활성화, 그 외는 answers[i] 유무 체크
-  const isNextDisabled = isStep3 || isStep4 ? false : !Boolean(answers[i]);
+  const isValid = required[i] ? Boolean(answers[i]) : true;
+  const isNextDisabled = isLast ? true : !isValid;
+
+  const handleChange = (val: string) =>
+    setAnswers((prev) => ({ ...prev, [i]: val }));
+
+  const goPrev = () => setI((s) => Math.max(0, s - 1));
+  const goNext = () => setI((s) => Math.min(steps.length - 1, s + 1));
+
+  // 버튼 사이 간격(px). Figma에 20px이면 20으로 두면 됨.
+  const GAP_PX = 20;
+  // 틈(스페이서) 배경색
+  const GAP_COLOR = "rgba(20,20,21,1)";
 
   return (
     <>
-      {/* 상단: 프로그레스바 */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur py-3">
+      {/* 상단 진행 바 */}
+      <div className="sticky top-0 z-10 bg-[rgba(20,20,21,1)] backdrop-blur py-3">
         <ProgressBar current={i} total={steps.length} />
       </div>
-
       {/* 본문 */}
       <div className="space-y-6">
-        <Current
-          value={answers[i]}
-          onChange={(val: string) =>
-            setAnswers((prev) => ({ ...prev, [i]: val }))
-          }
-        />
+        <Current value={answers[i]} onChange={handleChange} />
       </div>
 
-      {/* 하단 버튼 바 */}
       {!isLast && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-2xl bg-white/95 border-t p-4">
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 bg-[#141415]"
+          style={{ backgroundColor: "#141415" }} // 퍼지/우선순위 대비
+        >
           <div
-            className={`pointer-events-auto grid gap-3 ${
-              isStep4 ? "grid-cols-1" : "grid-cols-2"
-            }`}
+            className="pointer-events-auto mx-auto w-full max-w-[1200px] px-6 md:px-10 py-3 bg-[#141415]"
+            style={{ backgroundColor: "#141415" }}
           >
-            {!isStep4 && (
-              <button
-                className="h-12 rounded bg-gray-200 disabled:opacity-50"
-                onClick={() => setI((s) => Math.max(0, s - 1))}
-                disabled={i === 0}
-              >
-                이전
-              </button>
-            )}
-
-            <button
-              className="h-12 rounded bg-gray-800 text-white disabled:opacity-50"
-              onClick={() => setI((s) => Math.min(steps.length - 1, s + 1))}
-              disabled={isNextDisabled}
+            <div
+              className="flex items-stretch bg-[#141415]"
+              style={{ backgroundColor: "#141415" }}
             >
-              다음
-            </button>
-          </div>
+              {/* 이전 버튼(4단계면 숨김) */}
+              {!isStep4 && (
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  disabled={i === 0}
+                  className="h-12 flex-1 rounded-md bg-neutral-700 text-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  이전
+                </button>
+              )}
 
-          <div className="mt-2 text-center text-xs text-gray-500">
-            {i + 1} / {steps.length}
+              {/* 항상 렌더되는 스페이서(버튼 사이 틈 색을 강제) */}
+              <div
+                aria-hidden
+                style={{
+                  width: isStep4 ? 0 : 20, // Figma gap(20px). Step4는 0으로
+                  backgroundColor: "rgba(20,20,21,1)",
+                  transition: "width .2s ease",
+                }}
+              />
+
+              {/* 다음 버튼 */}
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={isNextDisabled}
+                className="h-12 flex-1 rounded-md bg-emerald-500 text-white hover:bg-emerald-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                다음
+              </button>
+            </div>
           </div>
         </div>
       )}

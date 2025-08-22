@@ -1,25 +1,26 @@
-// src/app/onboarding/layout.tsx
-import Link from "next/link";
-import BackButton from "./BackButton";
+import type { ReactNode } from "react";
 
 export default function OnboardingLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    // 회색 배경 + 가운데 정렬
-    <div className="min-h-[100dvh] bg-neutral-700 flex items-start sm:items-center justify-center p-4">
-      {/* 모바일 카드 프레임 */}
+    // 사이트 전체 배경: 공백 없는 임의값 or 헥스 사용
+    <div className="min-h-dvh w-full bg-[rgba(20,20,21,1)] text-white">
+      {/* 가운데 스테이지도 동일 색으로 통일 */}
       <div
-        className="relative w-full bg-white rounded-2xl shadow-2xl"
-        style={{
-          maxWidth: "var(--app-max-w)", // ex) 500px
-          minWidth: "var(--app-min-w)", // ex) 320px
-        }}
+        className={[
+          "mx-auto w-full min-h-dvh px-6 sm:px-10 lg:px-16",
+          "max-w-[1920px] xl:min-w-[1280px]",
+          "py-10 lg:py-12",
+          "bg-[#141415]",
+        ].join(" ")}
       >
-        {/* 콘텐츠 영역: 상단/하단 여유 */}
-        <div className="min-h-[100dvh] px-5 pt-6 pb-[96px]">{children}</div>
+        {/* 하단 바가 absolute로 붙을 기준 */}
+        <main className="relative mx-auto w-full max-w-[960px]">
+          {children}
+        </main>
       </div>
     </div>
   );
