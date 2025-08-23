@@ -1,6 +1,6 @@
 import type { StepProps } from "./types";
 
-const OPTIONS = ["기본보정(색상,밝기", "배치(음식 구도, 크기)", "컨셉보강"];
+const OPTIONS = ["기본보정(색상,밝기)", "배치(음식 구도, 크기)", "컨셉보강"];
 
 export default function Step3({ value, onChange }: StepProps) {
   return (
