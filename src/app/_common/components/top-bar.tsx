@@ -8,7 +8,7 @@ export function TopBar() {
             {/* 왼쪽 버튼 그룹 */}
             <div className="flex items-center gap-[28px]">
                 <Link
-                    href="/pixpl"
+                    href="/"
                     className="no-underline text-[#00D560] font-inter font-bold text-[25px] leading-[28px] tracking-[-0.255px]"
                 >
                     픽플
@@ -34,7 +34,7 @@ export function TopBar() {
 
                 <Link href="/mypage" className="bg-transparent p-0 border-0">
                     <img
-                        src="/svg/Mypage.svg"
+                        src="/svg/Topbar-Mypage.svg"
                         alt="마이페이지"
                         width={24}
                         height={24}
