@@ -33,8 +33,14 @@ export default function UnderBar() {
                 <p className="m-0 text-[#6B707F] font-inter font-light text-[17px] leading-[18px] tracking-[-0.2px]">
                     연세대학교 멋쟁이사자처럼 3팀 YonVoyage
                     <br />
-                    yonvoyage@gmail.com
+                    <a
+                        href="mailto:yonvoyage2025@gmail.com"
+                        className="no-underline text-[#6B707F] hover:underline"
+                    >
+                        yonvoyage2025@gmail.com
+                    </a>
                 </p>
+
 
 
                 {/* 3줄 */}
