@@ -2,7 +2,7 @@ import "@/styles/globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "모바일 레이아웃 테스트",
+  title: "Pixpl",
   description: "중앙 정렬 모바일 레이아웃",
 };
 
