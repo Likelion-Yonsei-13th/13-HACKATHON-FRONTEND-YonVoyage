@@ -23,7 +23,7 @@ body {
 .app-shell {
   /* 1280px ~ 1920px 사이에서는 뷰포트에 맞춰 늘어나고,
      그 이상은 1920px 고정, 그 이하는 1280px 고정(스크롤) */
-  width: clamp(var(--desk-min), 100vw, var(--desk-max));
+  width: clamp(var(--desk-min), 100%, var(--desk-max));
   min-width: var(--desk-min);
   max-width: var(--desk-max);
 
@@ -37,4 +37,5 @@ body {
 
   background: #111;
   border-radius: 12px;
+  box-sizing: border-box;
 }
