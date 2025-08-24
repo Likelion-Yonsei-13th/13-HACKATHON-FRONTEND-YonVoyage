@@ -2,11 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== Desktop spec ===== */
+/* ===== Global tokens ===== */
 :root {
-  --desk-min: 1280px; /* min width */
-  --desk-max: 1920px; /* fixed width 상한 */
-  --page-gap: 100px; /* 수직 간격 */
+  --desk-max: 1920px;
 }
 
 html,
@@ -19,23 +17,27 @@ body {
   color: #ededed;
 }
 
-/* 데스크탑 캔버스 */
+/* 반응형 컨테이너: 폭 제한 + 좌우 패딩만 담당 */
 .app-shell {
-  /* 1280px ~ 1920px 사이에서는 뷰포트에 맞춰 늘어나고,
-     그 이상은 1920px 고정, 그 이하는 1280px 고정(스크롤) */
-  width: clamp(var(--desk-min), 100%, var(--desk-max));
-  min-width: var(--desk-min);
+  width: 100%;
   max-width: var(--desk-max);
-
-  min-height: 100dvh; /* Height: Hug 느낌 */
-  margin-inline: auto; /* 가운데 정렬 */
-  padding: 40px 60px; /* 여백은 상황에 맞게 조절 */
-
-  display: grid; /* 수직 흐름 + 간격 100px */
-  grid-auto-rows: min-content;
-  row-gap: var(--page-gap);
-
-  background: #111;
-  border-radius: 12px;
+  min-width: 0;
+  margin-inline: auto;
+  padding-left: 16px;
+  padding-right: 16px;
   box-sizing: border-box;
 }
+@media (min-width: 640px) {
+  .app-shell {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+@media (min-width: 1024px) {
+  .app-shell {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+}
+
+/* (stage는 더 이상 사용하지 않음) */
