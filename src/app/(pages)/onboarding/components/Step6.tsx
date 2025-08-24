@@ -44,7 +44,7 @@ export default function Step6(_: StepProps) {
       >
         <div className="space-y-3">
           <Row onClick={() => router.push("/")}>끝내기</Row>
-          <Row onClick={() => router.push("/ai-studio")}>더 해볼래요!</Row>
+          <Row onClick={() => router.push("/aistudio")}>더 해볼래요!</Row>
         </div>
       </div>
     </section>
