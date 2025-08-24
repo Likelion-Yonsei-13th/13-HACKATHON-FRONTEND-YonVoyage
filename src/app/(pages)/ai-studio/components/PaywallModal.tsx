@@ -1,12 +1,11 @@
-// src/app/(pages)/aistudio/components/PaywallModal.tsx
 "use client";
 
 import { useEffect } from "react";
 
 type Props = {
   open: boolean;
-  onClose: () => void; // 닫기 (백드롭/ESC/아니요/네 모두에서 사용 가능)
-  onConfirm?: () => void; // 네 클릭 시 실행 (없으면 onClose fallback)
+  onClose: () => void;
+  onConfirm?: () => void;
 };
 
 export default function PaywallModal({ open, onClose, onConfirm }: Props) {

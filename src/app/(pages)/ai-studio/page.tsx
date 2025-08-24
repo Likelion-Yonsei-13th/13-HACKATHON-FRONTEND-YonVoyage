@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import Image from "next/image";
 
 // API들
 import {
@@ -66,24 +67,7 @@ export default function AiStudioPage() {
     })();
   }, [uuid]);
 
-  /** 업로드 */
-  const handleFiles = useCallback(
-    async (files: File[]) => {
-      setLoading(true);
-      try {
-        for (const f of files) await uploadImage(f);
-        const next = await listUploaded(uuid);
-        setUploaded(next);
-        if (!selectedUploaded && next.length) setSelectedUploaded(next[0]);
-      } catch (e) {
-        console.error(e);
-        alert("업로드에 실패했습니다.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [uuid, selectedUploaded]
-  );
+  /*
 
   /** 생성 */
   const handleGenerate = useCallback(
@@ -159,18 +143,13 @@ export default function AiStudioPage() {
       {/* 보기/저장 아이콘 */}
       <div className="flex items-center justify-end gap-4 text-white/70 text-sm mt-2">
         <button className="p-2" aria-label="보기">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 49 49"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M2.0415 38.7913V10.208H30.6248V38.7913H2.0415ZM34.7082 22.458V10.208H46.9582V22.458H34.7082ZM38.7915 18.3747H42.8748V14.2913H38.7915V18.3747ZM6.12484 34.708H26.5415V14.2913H6.12484V34.708ZM8.1665 30.6247H24.4998L19.1405 23.4788L15.3123 28.583L12.505 24.857L8.1665 30.6247ZM34.7082 38.7913V26.5413H46.9582V38.7913H34.7082ZM38.7915 34.708H42.8748V30.6247H38.7915V34.708Z"
-              fill="white"
-            />
-          </svg>
+          <Image
+            src="/img/ai-studio/gallery.png"
+            alt="갤러리"
+            width={26}
+            height={26}
+            className="object-contain"
+          />
         </button>
 
         <button
@@ -179,45 +158,33 @@ export default function AiStudioPage() {
           onClick={handleSave}
           disabled={!selectedGenerated || loading}
         >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 50 50"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M19.75 24.5L28.5 33.5625M28.5 33.5625L37.25 24.5M28.5 33.5625V10M18 39H39"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <Image
+            src="/img/ai-studio/download.png"
+            alt="저장"
+            width={18}
+            height={18}
+            className="object-contain"
+          />
         </button>
       </div>
 
       {/* ===== 최근 작업(생성 결과) 스트립 ===== */}
-
-      {/* ===== 최근 작업(생성 결과) 스트립 ===== */}
       <div className="mt-8">
-        {/* 1) 바깥: 가로 스크롤 컨테이너 */}
         <div className="w-full overflow-x-auto">
-          {/* 2) 가운데 정렬: 내용만큼만 차지(w-fit) + mx-auto */}
           <div className="w-fit mx-auto">
-            {/* 3) 실제 아이템들 배치 */}
             <div className="flex gap-3 pb-1">
               {/* Free 플레이스홀더 */}
               {Array.from({ length: placeholders }).map((_, i) => (
                 <div
                   key={`ph-${i}`}
-                  className="relative h-20 w-24 shrink-0 rounded border border-white/10 overflow-hidden bg-neutral-800/50 grid place-items-end"
+                  className="relative h-[137px] w-[119px] shrink-0 rounded border border-white/10 overflow-hidden"
                   title="Free slot"
                 >
-                  <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.06)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.06)_75%,transparent_75%,transparent)] bg-[length:12px_12px]" />
-                  <span className="relative z-10 w-full text-center text-[11px] leading-[18px] bg-black/60 text-white">
-                    Free
-                  </span>
+                  <img
+                    src="/img/ai-studio/free.png"
+                    alt="Free slot"
+                    className="h-full w-full object-cover"
+                  />
                 </div>
               ))}
 
