@@ -13,10 +13,16 @@ import FilterBar from "../_components/filter-bar";
 import { getFeedDetail, togglePick } from "../_lib/api";
 import type { FeedDetail } from "../_lib/types";
 
+function useUserUUID() {
+    // 로그인 연동되면 실제 값으로 교체
+    return "dev-uuid-123";
+}
+
 export default function GalleryDetailPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
     const search = useSearchParams();
+    const userUUID = useUserUUID();
 
     const [detail, setDetail] = useState<FeedDetail | null>(null);
 
@@ -24,7 +30,7 @@ export default function GalleryDetailPage() {
     const businessType = search.get("businessType") ?? undefined;
     const pickedOnly = search.get("pickedOnly") === "true";
 
-    // 쿼리 업데이트 유틸 (필터 조작 시 사용)
+    // 쿼리 업데이트 유틸 (필터 조작 시 URL만 갱신)
     const updateQuery = (patch: Record<string, string | undefined>) => {
         const q = new URLSearchParams(search.toString());
         Object.entries(patch).forEach(([k, v]) => {
@@ -34,31 +40,31 @@ export default function GalleryDetailPage() {
         router.replace(`/gallery/${id}?${q.toString()}`);
     };
 
-    // FilterBar 핸들러 (쿼리만 갱신)
+    // FilterBar 핸들러
     const handleSelectBusinessType = (bt?: string) => {
         updateQuery({
             businessType: bt,
-            pickedOnly: bt ? undefined : pickedOnly ? "true" : undefined,
+            pickedOnly: bt ? undefined : pickedOnly ? "true" : undefined, // 배타 처리
         });
     };
     const handleTogglePickedOnly = () => {
         const next = !pickedOnly;
         updateQuery({
             pickedOnly: next ? "true" : undefined,
-            businessType: next ? undefined : businessType,
+            businessType: next ? undefined : businessType, // 배타 처리
         });
     };
     const handleResetLatest = () => {
         updateQuery({ businessType: undefined, pickedOnly: undefined });
     };
 
-    // 🔹 상세만 로드
+    // 🔹 상세만 로드 (picked 반영 위해 userUUID 전달 권장)
     useEffect(() => {
         if (!id) return;
         let alive = true;
         (async () => {
             try {
-                const d = await getFeedDetail(Number(id));
+                const d = await getFeedDetail(Number(id), { userUUID });
                 if (!alive) return;
                 setDetail(d);
             } catch (e) {
@@ -68,7 +74,23 @@ export default function GalleryDetailPage() {
         return () => {
             alive = false;
         };
-    }, [id]);
+    }, [id, userUUID]);
+
+    // ❤️ 좋아요 토글
+    const handleToggleLike = async () => {
+        if (!detail) return;
+        // optimistic
+        setDetail(prev => (prev ? { ...prev, picked: !prev.picked } : prev));
+        try {
+            const res = await togglePick(detail.id, userUUID);
+            setDetail(prev =>
+                prev ? { ...prev, picked: res.picked, pick_count: res.pick_count } : prev
+            );
+        } catch {
+            // rollback
+            setDetail(prev => (prev ? { ...prev, picked: !prev.picked } : prev));
+        }
+    };
 
     if (!detail) return <div className="text-white">불러오는 중…</div>;
 
@@ -79,6 +101,7 @@ export default function GalleryDetailPage() {
 
             {/* 본문 컨테이너: 메인 갤러리와 동일 레이아웃 */}
             <section className="flex w-[1320px] py-8 flex-col justify-between items-start mx-auto px-[28px]">
+                {/* 카드 위에 FilterBar */}
                 <FilterBar
                     businessType={businessType}
                     onSelectBusinessType={handleSelectBusinessType}
@@ -103,8 +126,26 @@ export default function GalleryDetailPage() {
                     </div>
                 </div>
 
-                {/* 카드 하단 텍스트 */}
-                <div className="mt-6 space-y-2 text-left ">
+                {/* 👍 좋아요 버튼: 카드 아래 12px, 왼쪽에서 614px */}
+                <button
+                    onClick={handleToggleLike}
+                    className="relative mt-3"
+                    style={{ marginLeft: "614px", background: "transparent", border: "none", padding: 0 , cursor: "pointer",}}
+                    aria-label={detail.picked ? "좋아요 취소" : "좋아요"}
+                    title={detail.picked ? "좋아요 취소" : "좋아요"}
+                >
+                    <Image
+                        src={detail.picked ? "/svg/Gallery-like-2.svg" : "/svg/Gallery-like.svg"}
+                        alt="like"
+                        width={40}
+                        height={40}
+                        priority
+                    />
+                </button>
+
+
+                {/* 카드 하단 텍스트 (24px 간격, 지정 타이포) */}
+                <div className="mt-[0px] space-y-2 text-left">
                     <p className="text-[#F5F5F5] font-inter text-[17px] font-bold leading-[28px] tracking-[-0.255px]">
                         닉네임: {detail.nickname}
                     </p>
@@ -122,7 +163,7 @@ export default function GalleryDetailPage() {
                     </p>
                 </div>
 
-                {/* 이전목록 버튼 */}
+                {/* 이전목록 버튼 (93x50, 지정 타이포/보더) */}
                 <Link
                     href={`/gallery?${(() => {
                         const q = new URLSearchParams();
