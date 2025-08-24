@@ -1,238 +1,43 @@
 "use client";
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 
-import Image from "next/image";
+// API들
+import {
+  uploadImage,
+  generateImage,
+  listUploaded,
+  listGenerated,
+  saveGenerated,
+  type UploadedImage,
+  type GeneratedImage,
+} from "@/app/_common/apis/aistudio";
 
-/** ---------- Types ---------- */
-type UploadedImage = {
-  id: string;
-  url: string;
-  createdAt?: string;
-};
+// 컴포넌트
+import { SplitViewer } from "./components/SplitViewer";
 
-type GeneratedImage = {
-  id: string;
-  url: string;
-  createdAt?: string;
-  prompt?: string;
-};
+import { PromptComposer } from "./components/PromptComposer";
+import PaywallModal from "./components/PaywallModal";
 
-/** ---------- Small helpers ---------- */
-const cls = (...xs: (string | false | undefined)[]) =>
+/** helpers */
+const cx = (...xs: (string | false | undefined)[]) =>
   xs.filter(Boolean).join(" ");
-const API_BASE = ""; // 같은 도메인이라면 비워두기(상대경로). 별도 도메인이면 "https://..." 넣기.
 
-function getUUID(): string {
-  // 로그인 전용에서 uuid 필요 시, localStorage에 보관
+const getUUID = () => {
   if (typeof window === "undefined") return "";
-  const key = "aistudio_uuid";
-  let v = localStorage.getItem(key);
+  const KEY = "aistudio_uuid";
+  let v = localStorage.getItem(KEY);
   if (!v) {
     v = crypto.randomUUID();
-    localStorage.setItem(key, v);
+    localStorage.setItem(KEY, v);
   }
   return v;
-}
+};
 
-/** ---------- API calls  ---------- */
-async function apiUpload(file: File) {
-  const fd = new FormData();
-  fd.append("file", file);
-  const res = await fetch(`${API_BASE}/api/studio/upload/`, {
-    method: "POST",
-    body: fd,
-  });
-  if (!res.ok) throw new Error("upload failed");
-  return (await res.json()) as { id: string; url: string };
-}
+const HISTORY_CAP = 5;
 
-async function apiGenerate(payload: {
-  uuid?: string;
-  prompt: string;
-  image_id?: string;
-}) {
-  const res = await fetch(`${API_BASE}/api/studio/generate/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error("generate failed");
-  return (await res.json()) as { id: string; url: string };
-}
-
-async function apiListUploaded(uuid?: string) {
-  const q = uuid ? `?uuid=${encodeURIComponent(uuid)}` : "";
-  const res = await fetch(`${API_BASE}/api/studio/uploaded/${q}`, {
-    method: "GET",
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("list uploaded failed");
-  return (await res.json()) as UploadedImage[];
-}
-
-async function apiGetGenerated(id: string) {
-  const res = await fetch(`${API_BASE}/api/studio/${encodeURIComponent(id)}`, {
-    method: "GET",
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("get generated failed");
-  return (await res.json()) as GeneratedImage;
-}
-
-async function apiListGenerated(uuid?: string) {
-  const q = uuid ? `?uuid=${encodeURIComponent(uuid)}` : "";
-  const res = await fetch(`${API_BASE}/api/studio/generated/${q}`, {
-    method: "GET",
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("list generated failed");
-  return (await res.json()) as GeneratedImage[];
-}
-
-async function apiSaveGenerated(id: string) {
-  const res = await fetch(
-    `${API_BASE}/api/studio/${encodeURIComponent(id)}/save`,
-    { method: "POST" }
-  );
-  if (!res.ok) throw new Error("save failed");
-  return await res.json();
-}
-
-/** ---------- UI: Before/After Split Viewer ---------- */
-function SplitViewer({
-  leftUrl,
-  rightUrl,
-}: {
-  leftUrl?: string; // 원본(업로드)
-  rightUrl?: string; // 결과(생성)
-}) {
-  const [x, setX] = useState(50); // %
-  const ref = useRef<HTMLDivElement | null>(null);
-
-  const onDrag = useCallback((e: React.MouseEvent) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const nx = Math.min(
-      100,
-      Math.max(0, ((e.clientX - rect.left) / rect.width) * 100)
-    );
-    setX(nx);
-  }, []);
-
-  const onDragTouch = useCallback((e: React.TouchEvent) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const t = e.touches[0];
-    const nx = Math.min(
-      100,
-      Math.max(0, ((t.clientX - rect.left) / rect.width) * 100)
-    );
-    setX(nx);
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      className="relative w-full rounded-lg bg-[#181a1b] border border-white/10 overflow-hidden select-none"
-      style={{ aspectRatio: "16 / 9" }}
-      onMouseMove={(e) => e.buttons === 1 && onDrag(e)}
-      onTouchMove={onDragTouch}
-    >
-      {/* 좌측(업로드) */}
-      {leftUrl ? (
-        <img
-          src={leftUrl}
-          alt="uploaded"
-          className="absolute inset-0 h-full w-full object-contain"
-        />
-      ) : (
-        <div className="absolute inset-0 grid place-items-center text-sm text-white/40">
-          업로드 이미지 없음
-        </div>
-      )}
-
-      {/* 우측(생성) — 클리핑으로 왼쪽만큼 가림 */}
-      {rightUrl && (
-        <img
-          src={rightUrl}
-          alt="generated"
-          className="absolute inset-0 h-full w-full object-contain"
-          style={{ clipPath: `inset(0 0 0 ${x}%)` }}
-        />
-      )}
-
-      {/* 중앙 드래그 라인/핸들 */}
-      <div
-        className="absolute inset-y-0"
-        style={{ left: `${x}%`, transform: "translateX(-50%)" }}
-      >
-        <div className="h-full w-[2px] bg-white/80" />
-        <div className="absolute top-1/2 -translate-y-1/2 -left-4 right-0 flex justify-center">
-          <div className="rounded-full bg-white text-black text-xs px-2 py-1 shadow">
-            ↔
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** ---------- UI: Upload Dropzone ---------- */
-function UploadDrop({
-  onFiles,
-  disabled,
-}: {
-  onFiles: (files: File[]) => void;
-  disabled?: boolean;
-}) {
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
-    if (files.length) onFiles(files);
-  };
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (disabled) return;
-    const files = Array.from(e.dataTransfer.files || []);
-    if (files.length) onFiles(files);
-  };
-  return (
-    <label
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={onDrop}
-      className={cls(
-        "block rounded-md border border-dashed border-white/15",
-        "bg-black/20 hover:bg-black/30 transition-colors cursor-pointer",
-        "p-4 text-sm text-white/60"
-      )}
-    >
-      <input
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={onChange}
-        className="hidden"
-      />
-      <div className="flex items-center gap-3">
-        <div className="rounded bg-emerald-600/20 text-emerald-300 px-2 py-1 text-xs">
-          Free
-        </div>
-        <div>이미지를 드래그&드롭하거나 클릭해서 업로드</div>
-      </div>
-    </label>
-  );
-}
-
-/** ---------- Page ---------- */
 export default function AiStudioPage() {
   const uuid = useMemo(() => getUUID(), []);
-  const [prompt, setPrompt] = useState("");
   const [uploaded, setUploaded] = useState<UploadedImage[]>([]);
   const [generated, setGenerated] = useState<GeneratedImage[]>([]);
   const [selectedUploaded, setSelectedUploaded] =
@@ -240,24 +45,25 @@ export default function AiStudioPage() {
   const [selectedGenerated, setSelectedGenerated] =
     useState<GeneratedImage | null>(null);
   const [loading, setLoading] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
-  /** 초기 데이터 로드 */
+  /** 초기 데이터 */
   useEffect(() => {
     (async () => {
       try {
         const [u, g] = await Promise.all([
-          apiListUploaded(uuid),
-          apiListGenerated(uuid),
+          listUploaded(uuid),
+          listGenerated(uuid),
         ]);
         setUploaded(u);
-        setGenerated(g);
-        if (u.length && !selectedUploaded) setSelectedUploaded(u[0]);
-        if (g.length && !selectedGenerated) setSelectedGenerated(g[0]);
+        const last5 = g.slice(-HISTORY_CAP);
+        setGenerated(last5);
+        if (u.length) setSelectedUploaded(u[0]);
+        if (last5.length) setSelectedGenerated(last5[last5.length - 1]); // 가장 오른쪽(최근)
       } catch (e) {
         console.error(e);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uuid]);
 
   /** 업로드 */
@@ -265,14 +71,10 @@ export default function AiStudioPage() {
     async (files: File[]) => {
       setLoading(true);
       try {
-        const results: UploadedImage[] = [];
-        for (const f of files) {
-          const r = await apiUpload(f);
-          results.push({ id: r.id, url: r.url });
-        }
-        const list = await apiListUploaded(uuid);
-        setUploaded(list);
-        if (!selectedUploaded && list.length) setSelectedUploaded(list[0]);
+        for (const f of files) await uploadImage(f);
+        const next = await listUploaded(uuid);
+        setUploaded(next);
+        if (!selectedUploaded && next.length) setSelectedUploaded(next[0]);
       } catch (e) {
         console.error(e);
         alert("업로드에 실패했습니다.");
@@ -284,38 +86,50 @@ export default function AiStudioPage() {
   );
 
   /** 생성 */
-  const handleGenerate = useCallback(async () => {
-    if (!prompt.trim()) return alert("프롬프트를 입력해주세요.");
-    setLoading(true);
-    try {
-      const r = await apiGenerate({
-        uuid,
-        prompt,
-        image_id: selectedUploaded?.id,
-      });
-      // 방금 생성건을 상단에
-      const newItem: GeneratedImage = {
-        id: r.id,
-        url: r.url,
-        prompt,
-        createdAt: new Date().toISOString(),
-      };
-      setGenerated((prev) => [newItem, ...prev]);
-      setSelectedGenerated(newItem);
-    } catch (e) {
-      console.error(e);
-      alert("이미지 생성에 실패했습니다.");
-    } finally {
-      setLoading(false);
-    }
-  }, [prompt, uuid, selectedUploaded]);
+  const handleGenerate = useCallback(
+    async (prompt: string) => {
+      if (!prompt.trim()) return alert("프롬프트를 입력해주세요.");
+
+      // 5개 꽉 차면 유료 팝업 표시
+      if (generated.length >= HISTORY_CAP) {
+        setPaywallOpen(true);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const r = await generateImage({
+          uuid,
+          prompt,
+          image_id: selectedUploaded?.id,
+        });
+
+        const item: GeneratedImage = {
+          id: r.id,
+          url: r.url,
+          prompt,
+          createdAt: new Date().toISOString(),
+        };
+
+        // 오른쪽 끝에 추가
+        setGenerated((prev) => [...prev, item]);
+        setSelectedGenerated(item);
+      } catch (e) {
+        console.error(e);
+        alert("이미지 생성에 실패했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [uuid, selectedUploaded, generated.length]
+  );
 
   /** 저장 */
   const handleSave = useCallback(async () => {
     if (!selectedGenerated) return;
     setLoading(true);
     try {
-      await apiSaveGenerated(selectedGenerated.id);
+      await saveGenerated(selectedGenerated.id);
       alert("저장되었습니다.");
     } catch (e) {
       console.error(e);
@@ -325,6 +139,9 @@ export default function AiStudioPage() {
     }
   }, [selectedGenerated]);
 
+  /** 히스토리 스트립용 플레이스홀더 */
+  const placeholders = Math.max(0, HISTORY_CAP - generated.length);
+
   return (
     <div className="min-h-dvh w-full text-white">
       {/* 타이틀 */}
@@ -333,16 +150,15 @@ export default function AiStudioPage() {
       </h2>
       <div className="h-px w-full bg-white/10 mb-6" />
 
-      {/* 비교 뷰어 */}
+      {/* Before / After */}
       <SplitViewer
         leftUrl={selectedUploaded?.url}
         rightUrl={selectedGenerated?.url}
       />
 
-      {/* 업로드/다운로드 아이콘 영역 (우측) */}
+      {/* 보기/저장 아이콘 */}
       <div className="flex items-center justify-end gap-4 text-white/70 text-sm mt-2">
-        {/* 조회/다운로드 자리만 잡아둠 */}
-        <button className="p-2">
+        <button className="p-2" aria-label="보기">
           <svg
             width="24"
             height="24"
@@ -357,7 +173,12 @@ export default function AiStudioPage() {
           </svg>
         </button>
 
-        <button className="p-2">
+        <button
+          className="p-2"
+          aria-label="저장"
+          onClick={handleSave}
+          disabled={!selectedGenerated || loading}
+        >
           <svg
             width="24"
             height="24"
@@ -376,74 +197,70 @@ export default function AiStudioPage() {
         </button>
       </div>
 
-      {/* 업로드 썸네일 줄 */}
+      {/* ===== 최근 작업(생성 결과) 스트립 ===== */}
+
+      {/* ===== 최근 작업(생성 결과) 스트립 ===== */}
       <div className="mt-8">
-        <div className="flex gap-3 overflow-x-auto pb-1">
-          {uploaded.map((img) => (
-            <button
-              key={img.id}
-              onClick={() => setSelectedUploaded(img)}
-              className={cls(
-                "relative h-20 w-24 shrink-0 rounded border",
-                selectedUploaded?.id === img.id
-                  ? "border-emerald-500"
-                  : "border-white/10"
-              )}
-              title={img.id}
-            >
-              <img
-                src={img.url}
-                alt=""
-                className="h-full w-full object-cover rounded"
-              />
-            </button>
-          ))}
-          {/* 업로드 드롭 */}
-          <div className="w-48 shrink-0">
-            <UploadDrop onFiles={handleFiles} disabled={loading} />
+        {/* 1) 바깥: 가로 스크롤 컨테이너 */}
+        <div className="w-full overflow-x-auto">
+          {/* 2) 가운데 정렬: 내용만큼만 차지(w-fit) + mx-auto */}
+          <div className="w-fit mx-auto">
+            {/* 3) 실제 아이템들 배치 */}
+            <div className="flex gap-3 pb-1">
+              {/* Free 플레이스홀더 */}
+              {Array.from({ length: placeholders }).map((_, i) => (
+                <div
+                  key={`ph-${i}`}
+                  className="relative h-20 w-24 shrink-0 rounded border border-white/10 overflow-hidden bg-neutral-800/50 grid place-items-end"
+                  title="Free slot"
+                >
+                  <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.06)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.06)_75%,transparent_75%,transparent)] bg-[length:12px_12px]" />
+                  <span className="relative z-10 w-full text-center text-[11px] leading-[18px] bg-black/60 text-white">
+                    Free
+                  </span>
+                </div>
+              ))}
+
+              {/* 실제 생성 썸네일 */}
+              {generated.map((img) => (
+                <button
+                  key={img.id}
+                  onClick={() => setSelectedGenerated(img)}
+                  className={cx(
+                    "relative h-20 w-24 shrink-0 rounded border overflow-hidden transition hover:scale-[1.02]",
+                    selectedGenerated?.id === img.id
+                      ? "border-emerald-500"
+                      : "border-white/10"
+                  )}
+                  title={img.prompt || img.id}
+                >
+                  <img
+                    src={img.url}
+                    alt={img.id}
+                    className="h-full w-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 프롬프트 + 생성 버튼 */}
-      <div className="mt-6 relative">
-        <textarea
-          placeholder="사진을 지금보다 1.5배 더 밝게 해줘. 그리고 기념일에 맞는 축하 분위기로 플레이팅 이미지를 만들어줘!"
-          className="w-full min-h-[120px] rounded-md bg-[rgba(255,255,255,1)] text-black
-             border border-white/10 p-4 pr-12 outline-none
-             placeholder:text-black/30"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-        />
-
-        <button
-          onClick={handleGenerate}
-          disabled={loading}
-          className={cls(
-            "absolute bottom-3 right-3 h-8 w-8 grid place-items-center",
-            loading ? "opacity-50 cursor-not-allowed" : "hover:opacity-80"
-          )}
-          title="이미지 생성"
-        >
-          <Image
-            src="/img/ai-studio/button.png"
-            alt="생성 버튼"
-            width={20}
-            height={20}
-            className="object-contain"
-          />
-        </button>
-      </div>
+      {/* 프롬프트 + 생성버튼*/}
+      <PromptComposer onSubmit={handleGenerate} loading={loading} />
 
       {/* 하단 여백 */}
       <div className="h-10" />
 
-      {/* 로딩 얇은 토스트 느낌 */}
+      {/* 로딩 토스트 */}
       {loading && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-4 py-2 text-sm">
           처리 중...
         </div>
       )}
+
+      {/* 유료 안내 모달 (별도 컴포넌트) */}
+      <PaywallModal open={paywallOpen} onClose={() => setPaywallOpen(false)} />
     </div>
   );
 }
