@@ -27,6 +27,7 @@ body {
   padding-right: 16px;
   box-sizing: border-box;
 }
+<<<<<<< HEAD
 @media (min-width: 640px) {
   .app-shell {
     padding-left: 24px;
@@ -41,3 +42,49 @@ body {
 }
 
 /* (stage는 더 이상 사용하지 않음) */
+=======
+
+/* 문장과 버튼 사이 간격 */
+.cta-start-wrap {
+  margin-top: var(--cta-gap, 100px) !important; /* 기본 32px, 없으면 32px */
+}
+
+/* 문장 스타일(크기/두께) */
+.cta-text {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600; /* 굵게 */
+  font-size: var(--cta-text, 18px); /* 기본 18px */
+  line-height: 1.45;
+}
+
+/* 버튼 모양/사이즈 */
+.cta-start-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: var(--cta-width, 520px) !important;
+  max-width: 92vw !important;
+
+  height: var(--cta-height, 56px) !important;
+  min-height: 56px !important;
+
+  /* ⬇️ 둥근 정도를 변수로 조절 (완전 pill → 9999px, 살짝 둥글게 → 12~18px) */
+  border-radius: var(--cta-radius, 12px) !important;
+
+  background: #18d66e !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  font-size: large;
+  letter-spacing: 0.01em !important;
+
+  border: 1px solid rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 6px 16px rgba(24, 214, 110, 0.35) !important;
+  transition: all 0.2s ease !important;
+}
+
+.cta-start-btn:hover {
+  background: #1fe27a !important;
+  box-shadow: 0 8px 20px rgba(24, 214, 110, 0.45) !important;
+}
+>>>>>>> a9b237b (홈화면 구현)
