@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation"; // ✅ 라우터 추가
+import { useSearchParams } from "next/navigation";
 
 import { DEFAULT_LIMIT } from "../_lib/constants";
 import type { FeedItem } from "../_lib/types";
@@ -13,9 +14,6 @@ import FilterBar from "./filter-bar";
 
 import UnderBar from "@/app/_common/components/under-bar";
 
-// ⛔️ PhotoModal 제거
-// const PhotoModal = dynamic(() => import("./photo-modal"), { ssr: false });
-
 export default function GalleryBody() {
     const router = useRouter(); // ✅
 
@@ -24,6 +22,7 @@ export default function GalleryBody() {
      *  실제 로그인 연동 시 이 훅 교체
      * -------------------------------- */
     const userUUID = useUserUUID(); // "dev-uuid-123"
+    const search = useSearchParams();
 
     // 목록/페이징 상태
     const [items, setItems] = useState<FeedItem[]>([]);
@@ -34,6 +33,13 @@ export default function GalleryBody() {
     // 필터 상태 (배타 로직)
     const [businessType, setBusinessType] = useState<string | undefined>(undefined);
     const [pickedOnly, setPickedOnly] = useState(false);
+
+    useEffect(() => {
+        const bt = search.get("businessType");
+        const po = search.get("pickedOnly");
+        if (bt) setBusinessType(bt);
+        if (po === "true") setPickedOnly(true);
+    }, [search]);
 
     // 기타 상태
     const [loading, setLoading] = useState(false);
@@ -162,14 +168,22 @@ export default function GalleryBody() {
     // };
 
     /** ✅ 카드 클릭 → 상세 페이지 이동 (+ 다음 2장 id 쿼리로 전달) */
+
     const goDetail = (id: number) => {
-        const idx = items.findIndex((it) => it.id === id);
-        const next1 = items[idx + 1]?.id;
-        const next2 = items[idx + 2]?.id;
-        const q = [next1, next2].filter(Boolean).join(",");
-        const href = q ? `/gallery/${id}?next=${q}` : `/gallery/${id}`;
-        router.push(href);
-    };
+            const idx = items.findIndex((it) => it.id === id);
+            const next1 = items[idx + 1]?.id;
+            const next2 = items[idx + 2]?.id;
+            const nextQ = [next1, next2].filter(Boolean).join(",");
+
+            // 🔹 필터 상태를 쿼리로 추가
+            const query = new URLSearchParams();
+            if (nextQ) query.set("next", nextQ);
+            if (businessType) query.set("businessType", businessType);
+            if (pickedOnly) query.set("pickedOnly", "true");
+
+            router.push(`/gallery/${id}?${query.toString()}`);
+        };
+
 
     return (
         <section
@@ -215,16 +229,7 @@ export default function GalleryBody() {
                                     className="block w-full h-full object-cover"
                                     loading="lazy"
                                 />
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleToggleLike(item.id);
-                                    }}
-                                    className="absolute right-3 top-3 rounded-full bg-white/90 px-2 py-1 text-sm shadow hover:bg-white"
-                                    aria-label={item.picked ? "좋아요 취소" : "좋아요"}
-                                >
-                                    {item.picked ? "❤️" : "🤍"}
-                                </button>
+
                             </article>
                         </div>
                     ) : (
@@ -243,15 +248,7 @@ export default function GalleryBody() {
                 </div>
             )}
 
-            {/* ⛔️ 모달 완전 제거
-      {selectedId != null && (
-        <PhotoModal
-          feedId={selectedId}
-          userUUID={userUUID || undefined}
-          onClose={() => setSelectedId(null)}
-          onDeleted={handleDeleted}
-        />
-      )} */}
+
         </section>
     );
 }

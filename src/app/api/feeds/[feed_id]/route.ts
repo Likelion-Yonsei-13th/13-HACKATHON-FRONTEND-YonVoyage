@@ -12,7 +12,7 @@ export async function GET(
     return NextResponse.json({
         id: base.id,
         uuid: base.uuid,
-        nickname: "맛집요정",
+        nickname: "아기독수리",
         business_type: base.business_type,
         generated_image_id: base.generated_image_id,
         image_url: base.image_url,
