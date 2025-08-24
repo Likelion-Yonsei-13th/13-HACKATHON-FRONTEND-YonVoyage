@@ -8,7 +8,7 @@ export default function UnderBar() {
             className="
         w-full max-w-[1920px] min-w-[768px]
         bg-[#0F0F10]
-        px-6 py-10
+        px-[24px] py-[40px]
       "
         >
 

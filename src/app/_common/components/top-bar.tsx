@@ -22,7 +22,7 @@ export function TopBar() {
                 </Link>
 
                 <Link
-                    href="/ai-studio"
+                    href="/aistudio"
                     className="no-underline text-[#F5F5F5] font-inter font-bold text-[17px] leading-[28px] tracking-[-0.255px]"
                 >
                     AI스튜디오
