@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation"; // ✅ 라우터 추가
 
 import { DEFAULT_LIMIT } from "../_lib/constants";
 import type { FeedItem } from "../_lib/types";
@@ -13,9 +13,12 @@ import FilterBar from "./filter-bar";
 
 import UnderBar from "@/app/_common/components/under-bar";
 
-const PhotoModal = dynamic(() => import("./photo-modal"), { ssr: false });
+// ⛔️ PhotoModal 제거
+// const PhotoModal = dynamic(() => import("./photo-modal"), { ssr: false });
 
 export default function GalleryBody() {
+    const router = useRouter(); // ✅
+
     /** -------------------------------
      *  로그인: 개발용 가짜 UUID (옵션 A)
      *  실제 로그인 연동 시 이 훅 교체
@@ -35,7 +38,6 @@ export default function GalleryBody() {
     // 기타 상태
     const [loading, setLoading] = useState(false);
     const [err, setErr] = useState<string | null>(null);
-    const [selectedId, setSelectedId] = useState<number | null>(null);
 
     const canLoadMore = useMemo(() => offset < total, [offset, total]);
     const loaderRef = useRef<HTMLDivElement | null>(null);
@@ -154,16 +156,26 @@ export default function GalleryBody() {
         }
     };
 
-    const handleDeleted = () => {
-        // 상세에서 삭제 후 목록 새로고침
-        load({ reset: true });
+    // ⛔️ 모달 삭제로 불필요해진 핸들러 제거
+    // const handleDeleted = () => {
+    //   load({ reset: true });
+    // };
+
+    /** ✅ 카드 클릭 → 상세 페이지 이동 (+ 다음 2장 id 쿼리로 전달) */
+    const goDetail = (id: number) => {
+        const idx = items.findIndex((it) => it.id === id);
+        const next1 = items[idx + 1]?.id;
+        const next2 = items[idx + 2]?.id;
+        const q = [next1, next2].filter(Boolean).join(",");
+        const href = q ? `/gallery/${id}?next=${q}` : `/gallery/${id}`;
+        router.push(href);
     };
 
     return (
         <section
             className="
         flex max-w-[1440px] px-6 flex-col items-center w-full
-        pt-[28px]   /* TopBar와 28px 간격 (+ TopBar 고정 시 높이 62px 추가) */
+        pt-[28px]
         mx-auto
       "
         >
@@ -187,10 +199,10 @@ export default function GalleryBody() {
                     item ? (
                         <div key={`feed-${item.id}`}>
                             <article
-                                onClick={() => setSelectedId(item.id)}
+                                onClick={() => goDetail(item.id)}
                                 className="
                   relative w-[322px] h-[374px] flex-shrink-0
-                  rounded-[40px] bg-[#D9D9D9]         /* ← border 제거 */
+                  rounded-[40px] bg-[#D9D9D9]
                   overflow-hidden cursor-pointer
                   transition-transform duration-300 ease-in-out transform-gpu
                   hover:scale-[1.03] hover:z-10
@@ -200,7 +212,7 @@ export default function GalleryBody() {
                                 <img
                                     src={item.image_url}
                                     alt={item.business_type}
-                                    className="block w-full h-full object-cover" /* block으로 미세 여백 제거 */
+                                    className="block w-full h-full object-cover"
                                     loading="lazy"
                                 />
                                 <button
@@ -231,14 +243,15 @@ export default function GalleryBody() {
                 </div>
             )}
 
-            {selectedId != null && (
-                <PhotoModal
-                    feedId={selectedId}
-                    userUUID={userUUID || undefined}
-                    onClose={() => setSelectedId(null)}
-                    onDeleted={handleDeleted}
-                />
-            )}
+            {/* ⛔️ 모달 완전 제거
+      {selectedId != null && (
+        <PhotoModal
+          feedId={selectedId}
+          userUUID={userUUID || undefined}
+          onClose={() => setSelectedId(null)}
+          onDeleted={handleDeleted}
+        />
+      )} */}
         </section>
     );
 }
