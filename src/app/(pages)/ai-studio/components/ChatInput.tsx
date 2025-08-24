@@ -30,7 +30,7 @@ export default function ChatInput({
         }}
       />
       <button
-        className="h-11 shrink-0 rounded-lg bg-gray-900 px-4 text-sm text-white disabled:opacity-40"
+        className="h-11 shrink-0 rounded-lg bg-gray-900 px-4 text-sm text-black disabled:opacity-40"
         onClick={onSend}
         disabled={disabled || !value.trim()}
       >
