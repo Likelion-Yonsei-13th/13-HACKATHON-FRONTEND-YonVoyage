@@ -170,14 +170,8 @@ export default function GalleryBody() {
     /** ✅ 카드 클릭 → 상세 페이지 이동 (+ 다음 2장 id 쿼리로 전달) */
 
     const goDetail = (id: number) => {
-            const idx = items.findIndex((it) => it.id === id);
-            const next1 = items[idx + 1]?.id;
-            const next2 = items[idx + 2]?.id;
-            const nextQ = [next1, next2].filter(Boolean).join(",");
-
             // 🔹 필터 상태를 쿼리로 추가
             const query = new URLSearchParams();
-            if (nextQ) query.set("next", nextQ);
             if (businessType) query.set("businessType", businessType);
             if (pickedOnly) query.set("pickedOnly", "true");
 
