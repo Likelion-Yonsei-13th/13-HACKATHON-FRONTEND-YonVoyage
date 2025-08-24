@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-export function TopBar() {
+export default function TopBar() {
     return (
         <nav className="flex w-full h-[62px] px-6 py-3 justify-between items-center bg-black">
             {/* 왼쪽 버튼 그룹 */}
@@ -22,7 +22,7 @@ export function TopBar() {
                 </Link>
 
                 <Link
-                    href="/ai-studio"
+                    href="/aistudio"
                     className="no-underline text-[#F5F5F5] font-inter font-bold text-[17px] leading-[28px] tracking-[-0.255px]"
                 >
                     AI스튜디오
