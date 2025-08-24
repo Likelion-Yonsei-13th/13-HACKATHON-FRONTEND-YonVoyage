@@ -1,18 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Desktop spec ===== */
 :root {
-  --app-min-w: 320px;
-  --app-max-w: 430px; /* 아이폰 기준 폭 */
+  --desk-min: 1280px; /* min width */
+  --desk-max: 1920px; /* fixed width 상한 */
+  --page-gap: 100px; /* 수직 간격 */
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: rgb(255, 255, 255); /* 좌우 여백 흰색 */
+  background: #0a0a0a;
+  color: #ededed;
 }
 
-/* 중앙에 앱 캔버스 */
+/* 데스크탑 캔버스 */
 .app-shell {
-  max-width: var(--app-max-w);
-  min-width: var(--app-min-w);
-  margin-left: auto;
-  margin-right: auto;
-  min-height: 100dvh;
-  background: #d5eaff; /*일단 파랑으로 해둠*/
+  /* 1280px ~ 1920px 사이에서는 뷰포트에 맞춰 늘어나고,
+     그 이상은 1920px 고정, 그 이하는 1280px 고정(스크롤) */
+  width: clamp(var(--desk-min), 100%, var(--desk-max));
+  min-width: var(--desk-min);
+  max-width: var(--desk-max);
+
+  min-height: 100dvh; /* Height: Hug 느낌 */
+  margin-inline: auto; /* 가운데 정렬 */
+  padding: 40px 60px; /* 여백은 상황에 맞게 조절 */
+
+  display: grid; /* 수직 흐름 + 간격 100px */
+  grid-auto-rows: min-content;
+  row-gap: var(--page-gap);
+
+  background: #111;
+  border-radius: 12px;
+  box-sizing: border-box;
 }

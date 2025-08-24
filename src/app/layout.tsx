@@ -1,5 +1,10 @@
-// src/app/layout.tsx
-import "./globals.css";
+import "@/styles/globals.css";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Pixpl",
+  description: "중앙 정렬 모바일 레이아웃",
+};
 
 export default function RootLayout({
   children,
@@ -8,7 +13,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        {/* 중앙 모바일 캔버스 */}
+        <div className="app-shell shadow-lg">{children}</div>
+      </body>
     </html>
   );
 }
