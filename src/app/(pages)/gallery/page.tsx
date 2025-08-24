@@ -1,4 +1,4 @@
-import { TopBar } from "@/app/_common/components/top-bar";
+import TopBar from "@/app/_common/components/top-bar";
 import GalleryBody from "./_components/gallery-body";
 
 export default function Gallery() {

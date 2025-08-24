@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-export function TopBar() {
+export default function TopBar() {
     return (
         <nav className="flex w-full h-[62px] px-6 py-3 justify-between items-center bg-black">
             {/* 왼쪽 버튼 그룹 */}
