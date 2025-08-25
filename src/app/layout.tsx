@@ -3,7 +3,10 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Pixpl",
-  description: "중앙 정렬 모바일 레이아웃",
+  description: "AI 음식 사진 보정 서비스",
+    icons: {
+        icon: "/favicon.png",
+    }
 };
 
 export default function RootLayout({

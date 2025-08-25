@@ -8,7 +8,7 @@ export default function AiStudioLayout({ children }: { children: ReactNode }) {
     <div className="min-h-dvh flex flex-col bg-[#141415] text-white">
       {/* 상단바: 전체폭 */}
       <header className="w-full">
-        <TopBar />
+        <TopBar highlight={"aistudio"}/>
       </header>
 
       {/* 본문: 풀스크린 */}
