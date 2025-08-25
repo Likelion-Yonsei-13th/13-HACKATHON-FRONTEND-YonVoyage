@@ -1,4 +1,4 @@
-// src/app/api/studio/upload/route.ts
+// src/app/api/studio/generate/route.ts
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
@@ -6,28 +6,24 @@ import { NextResponse } from "next/server";
 const UPSTREAM_BASE =
   process.env.PIXPL_BASE?.replace(/\/$/, "") ||
   process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ||
-  "https://pixpl.com"; // 기본값
+  "https://pixpl.com";
 
 export async function POST(req: Request) {
   try {
-    const form = await req.formData();
-    const file = form.get("file") as File | null;
-    if (!file) {
-      return NextResponse.json({ error: "No file" }, { status: 400 });
+    const body = await req.json().catch(() => ({}));
+    const upstreamUrl = `${UPSTREAM_BASE}/api/studio/generate/`;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (process.env.BACKEND_API_KEY) {
+      headers.Authorization = `Bearer ${process.env.BACKEND_API_KEY}`;
     }
-
-    const fd = new FormData();
-    fd.append("file", file, (file as any).name ?? "upload.bin");
-
-    const upstreamUrl = `${UPSTREAM_BASE}/api/studio/upload/`; // ✅ 요구한 엔드포인트
-    const headers = process.env.BACKEND_API_KEY
-      ? { Authorization: `Bearer ${process.env.BACKEND_API_KEY}` }
-      : undefined;
 
     const upstream = await fetch(upstreamUrl, {
       method: "POST",
-      body: fd,
       headers,
+      body: JSON.stringify(body),
       cache: "no-store",
     });
 
@@ -40,12 +36,12 @@ export async function POST(req: Request) {
     }
 
     console.log(
-      `✅ 업로드 프록시 완료: ${upstream.status} ${upstream.statusText} (${upstreamUrl})`
+      `✅ 생성 프록시 완료: ${upstream.status} ${upstream.statusText} (${upstreamUrl})`
     );
 
     return NextResponse.json(data, { status: upstream.status });
   } catch (e: any) {
-    console.error("[Proxy:upload] error:", e?.message || e);
+    console.error("[Proxy:generate] error:", e?.message || e);
     return NextResponse.json(
       { error: `proxy error: ${e?.message || e}` },
       { status: 500 }
