@@ -12,7 +12,7 @@ export default function HomePage() {
       <HeroCarousel />
 
       <section className="mt-[120px] md:mt-[160px]">
-        <PickGrid moreHref="/picks" />
+        <PickGrid />
       </section>
 
       <section className="mt-[120px] md:mt-[160px]">
