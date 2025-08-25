@@ -20,7 +20,7 @@ export default function FAQAccordion({
 
   return (
     <section className={`px-6 md:px-12 py-14 overflow-visible ${className}`}>
-      <h2 className="text-white text-4xl font-bold pl-[40px] md:pl-[100px]">
+      <h2 className="text-white text-2xl font-bold pl-[40px] md:pl-[3px]">
         {title}
       </h2>
 
@@ -35,7 +35,7 @@ export default function FAQAccordion({
               }`}
             >
               <div className="flex items-center justify-between gap-6">
-                <p className="text-white text-[22px] md:text-[36px] leading-tight font-semibold">
+                <p className="text-white text-[22px] md:text-[20px] leading-tight font-semibold">
                   {it.q}
                 </p>
 

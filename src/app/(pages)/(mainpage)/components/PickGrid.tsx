@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import Image from "next/image"; // ← 추가
 
 type PickItem = { id: number; title?: string; img?: string };
 
@@ -10,26 +9,15 @@ const defaultItems: PickItem[] = Array.from({ length: 8 }).map((_, i) => ({
   id: i + 1,
 }));
 
-// 파일 경로만 프로젝트에 맞게 수정하세요.
-const STAR_WHITE = "/svg/star-white.png"; // or .svg
-const STAR_GREEN = "/svg/star-green.png"; // or .svg
-
 export default function PickGrid({
   items = defaultItems,
-  moreHref = "/picks",
+  moreHref = "/gallery",
 }: {
   items?: PickItem[];
   moreHref?: string;
 }) {
   const router = useRouter();
   const [favs, setFavs] = useState<Set<number>>(new Set([1]));
-
-  const toggleFav = (id: number) =>
-    setFavs((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
 
   return (
     <section className="mt-24 md:mt-28">
@@ -68,33 +56,6 @@ export default function PickGrid({
                 >
                   {/* 카드 비율 */}
                   <div className="aspect-[4/5] w-full" />
-
-                  {/* 즐겨찾기 버튼 */}
-                  <button
-                    onClick={() => toggleFav(item.id)}
-                    aria-label="즐겨찾기"
-                    aria-pressed={active}
-                    className="
-                      absolute right-2.5 top-2.5
-                      grid place-items-center
-                      h-6 w-6 rounded-full
-                    "
-                    // 배경을 유지하고 싶으면 아래를 사용 (원 제거는 배경 투명으로)
-                    style={{
-                      backgroundColor: "rgba(0,0,0,0.08)", // 원 배경 유지
-                      // backgroundColor: "transparent",   // 원 배경 제거하고 싶으면 이 줄로 변경
-                      border: "1px solid rgba(0,0,0,0.10)",
-                    }}
-                  >
-                    {/* ⬇️ 상태에 따라 별 이미지 교체 */}
-                    <Image
-                      src={active ? STAR_GREEN : STAR_WHITE}
-                      alt="favorite"
-                      width={12}
-                      height={12}
-                      className="pointer-events-none select-none"
-                    />
-                  </button>
                 </article>
               );
             })}
