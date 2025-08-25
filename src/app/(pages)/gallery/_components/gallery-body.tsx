@@ -167,7 +167,7 @@ export default function GalleryBody() {
                 pickedOnly={pickedOnly}
                 onTogglePickedOnly={handleTogglePickedOnly}
                 onResetLatest={handleResetLatest}
-                disabledMyPick={!userUUID}
+                disabledMyPick={false}
             />
 
             {err && (
@@ -231,7 +231,11 @@ export default function GalleryBody() {
     );
 }
 
-/** 개발용 가짜 로그인 UUID */
+/** 개발용 가짜 로그인 UUID (옵션 A)
+ *  👉 로그인 연동 전까지는 null 반환
+ *  👉 picked_only 버튼 누르면 alert만 뜨고 서버 요청 안 나감
+ */
 function useUserUUID() {
-    return "dev-uuid-123";
+    return null;
 }
+
