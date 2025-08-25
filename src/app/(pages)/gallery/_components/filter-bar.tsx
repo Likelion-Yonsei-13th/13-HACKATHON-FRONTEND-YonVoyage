@@ -214,7 +214,7 @@ function DropdownItem({
             className={[
                 "flex w-full items-start gap-[10px]",
                 "appearance-none border-0 outline-none ring-0 bg-transparent",
-                "hover:bg-white/70",
+                "hover:text-[#00D560]",
                 "cursor-pointer select-none",
                 `${fira.className} text-[16px] leading-5 font-normal text-black`,
             ].join(" ")}
