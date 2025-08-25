@@ -9,7 +9,6 @@ import type { FeedItem } from "../_lib/types";
 import { getFeeds, togglePick } from "../_lib/api";
 
 import MasonryGrid from "./masonry-grid";
-// import { CardSkeleton } from "./skeletons"; // ❌ 스켈레톤 제거
 import FilterBar from "./filter-bar";
 
 import UnderBar from "@/app/_common/components/under-bar";
@@ -232,10 +231,25 @@ export default function GalleryBody() {
 }
 
 /** 개발용 가짜 로그인 UUID (옵션 A)
- *  👉 로그인 연동 전까지는 null 반환
- *  👉 picked_only 버튼 누르면 alert만 뜨고 서버 요청 안 나감
+ *  👉 로그인 연동 전까지는 localStorage에서 읽고, 없으면 null
+ *  👉 picked_only/좋아요/삭제는 uuid 있을 때만 헤더 전송
  */
 function useUserUUID() {
-    return null;
-}
+    // 이 파일 상단에 이미 React 훅들이 import되어 있으니 그대로 사용 가능
+    const [uuid, setUuid] = useState<string | null>(null);
 
+    useEffect(() => {
+        try {
+            // 브라우저 환경에서만 접근
+            const v =
+                typeof window !== "undefined"
+                    ? window.localStorage.getItem("userUUID")
+                    : null;
+            setUuid(v && v.trim() ? v : null);
+        } catch {
+            setUuid(null);
+        }
+    }, []);
+
+    return uuid;
+}
