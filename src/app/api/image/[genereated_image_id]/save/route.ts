@@ -2,10 +2,10 @@
 export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 
-type Params = { params: { generated_image_id: string } };
+type Params = { params: Promise<{ generated_image_id: string }> };
 
 export async function POST(req: Request, { params }: Params) {
-  const { generated_image_id } = params;
+  const { generated_image_id } = await params;
   const body = await req.text(); // 보낼 바디가 있으면 그대로 전달 (없으면 빈 바디)
 
   const res = await fetch(

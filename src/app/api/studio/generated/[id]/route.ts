@@ -8,9 +8,12 @@ const UPSTREAM_BASE =
   process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ||
   "https://pixpl.com";
 
-export async function GET(_req: Request, ctx: { params: { id: string } }) {
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = ctx.params;
+    const { id } = await params;
     const upstreamUrl = `${UPSTREAM_BASE}/api/studio/generated/${encodeURIComponent(
       id
     )}/`;
