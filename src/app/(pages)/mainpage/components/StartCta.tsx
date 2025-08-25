@@ -15,7 +15,7 @@ type Props = {
 export default function StartCta({
   text = "내 사진으로 픽플 시작해볼까요?",
   buttonText = "시작",
-  href = "/ai-studio",
+  href = "/aistudio",
   useUpload = false,
   onUpload,
 }: Props) {

@@ -11,7 +11,7 @@ const defaultItems: PickItem[] = Array.from({ length: 8 }).map((_, i) => ({
 
 export default function MyPlating({
   items = defaultItems,
-  moreHref = "/picks",
+  moreHref = "/gallery",
 }: {
   items?: PickItem[];
   moreHref?: string;
@@ -75,30 +75,6 @@ export default function MyPlating({
                 >
                   {/* ▶ 정사각형보다 세로가 살짝 긴 직사각형: 4:5 비율 */}
                   <div className="aspect-[4/5] w-full" />
-
-                  {/* 즐겨찾기 버튼 (우상단) */}
-                  <button
-                    onClick={() => toggleFav(item.id)}
-                    aria-label="즐겨찾기"
-                    aria-pressed={active}
-                    className="
-                      absolute right-2.5 top-2.5
-                      grid h-5 w-5 place-items-center
-                      rounded-full border border-black/10
-                      transition
-                    "
-                    style={{
-                      backgroundColor: active ? "#10b981" : "rgba(0,0,0,0.08)",
-                    }}
-                  >
-                    {/* 비활성 회색, 활성은 흰 별로 보이도록 */}
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M12 3l2.7 5.47 6.05.88-4.38 4.27 1.03 6.01L12 17.77 6.6 19.63l1.03-6.01L3.25 9.35l6.05-.88L12 3z"
-                        fill={active ? "white" : "#bbb"}
-                      />
-                    </svg>
-                  </button>
                 </article>
               );
             })}
