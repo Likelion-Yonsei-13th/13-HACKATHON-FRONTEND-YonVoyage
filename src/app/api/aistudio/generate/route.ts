@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       });
     }
 
-    let data: any = text ? JSON.parse(text) : {};
+    const data: any = text ? JSON.parse(text) : {};
     // url 정규화(후단이 상대경로만 줄 때 대비)
     const media = data?.url ?? data?.generated_image;
     if (typeof media === "string" && !/^https?:\/\//i.test(media)) {
