@@ -14,9 +14,21 @@ import { getFeedDetail, togglePick } from "../_lib/api";
 import type { FeedDetail } from "../_lib/types";
 
 function useUserUUID() {
-    // 로그인 연동되면 실제 값으로 교체
-    return "dev-uuid-123";
+    const [uuid, setUuid] = useState<string | null>(null);
+    useEffect(() => {
+        try {
+            const v =
+                typeof window !== "undefined"
+                    ? window.localStorage.getItem("userUUID")
+                    : null;
+            setUuid(v && v.trim() ? v : null);
+        } catch {
+            setUuid(null);
+        }
+    }, []);
+    return uuid;
 }
+
 
 export default function GalleryDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -64,11 +76,15 @@ export default function GalleryDetailPage() {
         let alive = true;
         (async () => {
             try {
-                const d = await getFeedDetail(Number(id), { userUUID });
+                // userUUID가 있으면 헤더에 포함, 없으면 undefined로 전달하여 헤더 제외
+                const options = userUUID ? { userUUID } : {};
+                const d = await getFeedDetail(Number(id), options);
                 if (!alive) return;
                 setDetail(d);
             } catch (e) {
-                console.error(e);
+                console.error('Failed to load feed detail:', e);
+                // 에러 상태 처리 (선택사항)
+                // setError(e.message);
             }
         })();
         return () => {
@@ -79,6 +95,10 @@ export default function GalleryDetailPage() {
     // ❤️ 좋아요 토글
     const handleToggleLike = async () => {
         if (!detail) return;
+        if (!userUUID) {
+            alert("로그인 후 이용해주세요.");
+            return;
+        }
         // optimistic
         setDetail(prev => (prev ? { ...prev, picked: !prev.picked } : prev));
         try {
@@ -118,7 +138,7 @@ export default function GalleryDetailPage() {
                         style={{ width: 654, height: 374 }}
                     >
                         <Image
-                            src={detail.image_url}
+                            src={detail.image_url.startsWith('http') ? detail.image_url : `/${detail.image_url}`}
                             alt={`feed-${detail.id}`}
                             fill
                             className="object-cover"

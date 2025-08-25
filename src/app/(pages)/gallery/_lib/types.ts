@@ -32,3 +32,11 @@ export type FeedDetail = {
     created_at: string; // ISO 8601
     is_mine: boolean;   // 🔧 필수로 변경
 };
+
+export interface TogglePickResponse {
+    feed_id: number;
+    user_uuid: number;
+    picked: boolean;
+    pick_count: number;
+    updated_at: string;
+}
