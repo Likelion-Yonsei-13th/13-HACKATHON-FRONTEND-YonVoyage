@@ -1,4 +1,7 @@
+"use client";
+
 import type { StepProps } from "./types";
+import UserInfo from "./UserInfo";
 
 const OPTIONS = [
   "AI 초수",
@@ -9,21 +12,21 @@ const OPTIONS = [
 export default function Step1({ value, onChange }: StepProps) {
   return (
     <section className="min-h-[60vh] flex flex-col items-center justify-center gap-8">
-      <h2 className="text-2xl font-bold text-white">나(사장님)은?</h2>
+      <h2 className="text-2xl font-bold text-white">시작하기</h2>
 
-      {/* 카드 */}
       <div
         className="rounded-lg text-gray-200"
         style={{
           width: "454px",
-          height: "356px",
           minWidth: "280px",
           borderRadius: "12px",
-          backgroundColor: "rgba(33, 34, 37, 1)", // ← 알파 1 로 수정
+          backgroundColor: "rgba(33, 34, 37, 1)",
           padding: "32px",
         }}
       >
-        <ul className="space-y-4 mt-8">
+        <h3 className="text-base font-semibold text-white">나(사장님)은?</h3>
+
+        <ul className="space-y-4 mt-6">
           {OPTIONS.map((label) => (
             <li
               key={label}
