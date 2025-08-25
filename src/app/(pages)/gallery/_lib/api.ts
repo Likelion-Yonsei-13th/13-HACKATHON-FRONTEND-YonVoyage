@@ -1,94 +1,94 @@
-// app/gallery/_lib/api.ts
-import type { FeedDetail, FeedListResponse } from "./types";
+import type {
+    FeedItem,
+    FeedListResponse,
+    FeedDetail,
+    TogglePickResponse,
+} from "./types";
 
-const RAW_BASE = (process.env.NEXT_PUBLIC_API_BASE ?? "").trim();
-
-/** BASE가 있으면 외부 서버로, 없으면 로컬 상대경로(/api/...)로 */
-function joinUrl(base: string, path: string) {
-    if (!base) return path; // 모킹: 내부 라우트로 호출
-    return `${base.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
+// BASE URL 조합 (개발: /api/proxy, 운영: https://pixpl.com)
+function joinUrl(path: string) {
+    const base = process.env.NEXT_PUBLIC_API_BASE ?? "";
+    return base + path;
 }
 
-type CommonOpts = { userUUID?: string };
+// =====================
+// 피드 목록 조회
+// =====================
+export async function getFeeds(args: {
+    offset?: number;
+    limit?: number;
+    business_type?: string;
+    picked_only?: boolean;
+    userUUID?: string;
+}) {
+    const { offset = 0, limit = 20, business_type, picked_only, userUUID } = args;
 
-function buildHeaders(userUUID?: string) {
-    const h: Record<string, string> = { "Content-Type": "application/json" };
-    if (userUUID) h["X-User-UUID"] = userUUID;
-    return h;
-}
-
-/** 1) 목록 */
-export async function getFeeds(
-    params: {
-        offset?: number;
-        limit?: number;
-        business_type?: string;
-        picked_only?: boolean;
-    } & CommonOpts
-): Promise<FeedListResponse> {
-    const { offset = 0, limit = 20, business_type, picked_only, userUUID } = params;
     const qs = new URLSearchParams();
     qs.set("offset", String(offset));
     qs.set("limit", String(limit));
     if (business_type) qs.set("business_type", business_type);
-    if (typeof picked_only === "boolean") qs.set("picked_only", String(picked_only));
+    if (picked_only) qs.set("picked_only", "true");
 
-    // 🔧 트레일링 슬래시
-    const url = joinUrl(RAW_BASE, `/api/feeds/?${qs.toString()}`);
+    const headers: HeadersInit = {};
+    if (picked_only && userUUID) {
+        headers["X-User-UUID"] = userUUID;
+    }
 
-    const res = await fetch(url, {
+    const res = await fetch(joinUrl(`/feeds/?${qs.toString()}`), {
         method: "GET",
-        headers: buildHeaders(userUUID),
+        headers,
         cache: "no-store",
-        credentials: "include",
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return (await res.json()) as FeedListResponse;
 }
 
-/** 2) 상세 */
-export async function getFeedDetail(feedId: number, opts?: CommonOpts): Promise<FeedDetail> {
-    // 🔧 트레일링 슬래시
-    const url = joinUrl(RAW_BASE, `/api/feeds/${feedId}/`);
-    const res = await fetch(url, {
+// =====================
+// 피드 상세 조회
+// =====================
+export async function getFeedDetail(
+    feedId: number,
+    opts?: { userUUID?: string }
+) {
+    const headers: HeadersInit = {};
+    if (opts?.userUUID) {
+        headers["X-User-UUID"] = opts.userUUID;
+    }
+
+    const res = await fetch(joinUrl(`/feeds/${feedId}/`), {
         method: "GET",
-        headers: buildHeaders(opts?.userUUID),
+        headers,
         cache: "no-store",
-        credentials: "include",
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return (await res.json()) as FeedDetail;
 }
 
-/** 3) 좋아요 토글 */
+// =====================
+// 좋아요 토글
+// =====================
 export async function togglePick(feedId: number, userUUID: string) {
-    // 🔧 트레일링 슬래시
-    const url = joinUrl(RAW_BASE, `/api/feeds/${feedId}/picks/`);
-    const res = await fetch(url, {
+    const res = await fetch(joinUrl(`/feeds/${feedId}/picks/`), {
         method: "POST",
-        headers: buildHeaders(userUUID),
+        headers: {
+            "X-User-UUID": userUUID,
+        },
         cache: "no-store",
-        credentials: "include",
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return (await res.json()) as {
-        feed_id: number;
-        user_uuid: number; // BE integer
-        picked: boolean;
-        pick_count: number;
-        updated_at: string;
-    };
+    return (await res.json()) as TogglePickResponse;
 }
 
-/** 4) 삭제 */
+// =====================
+// 내 피드 삭제
+// =====================
 export async function deleteFeed(feedId: number, userUUID: string) {
-    // 🔧 트레일링 슬래시
-    const url = joinUrl(RAW_BASE, `/api/feeds/${feedId}/`);
-    const res = await fetch(url, {
+    const res = await fetch(joinUrl(`/feeds/${feedId}/`), {
         method: "DELETE",
-        headers: buildHeaders(userUUID),
+        headers: {
+            "X-User-UUID": userUUID,
+        },
         cache: "no-store",
-        credentials: "include",
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return (await res.json()) as { message: string };

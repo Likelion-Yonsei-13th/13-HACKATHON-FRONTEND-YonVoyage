@@ -51,18 +51,13 @@ export default function UnderBar() {
                         className="block w-[62px] h-[30px]"
                     />
 
-                    <a
-                        href="https://www.instagram.com/likelion_yonsei/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-transparent p-0 border-0"
-                    >
+
                         <img
-                            src="/svg/Footer-instagram.svg"
+                            src="/svg/Footer-copyright.svg"
                             alt="external-link"
                             className="block w-[36px] h-[36px]"
                         />
-                    </a>
+
                 </div>
             </div>
         </footer>
