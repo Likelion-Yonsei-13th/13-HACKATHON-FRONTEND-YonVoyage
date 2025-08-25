@@ -1,4 +1,4 @@
-import { TopBar } from "@/app/_common/components/top-bar";
+import TopBar from "@/app/_common/components/top-bar";
 import UnderBar from "@/app/_common/components/under-bar";
 import ProfileHeader from "./components/ProfileHeader";
 import MyPlating from "./components/MyPlating";
