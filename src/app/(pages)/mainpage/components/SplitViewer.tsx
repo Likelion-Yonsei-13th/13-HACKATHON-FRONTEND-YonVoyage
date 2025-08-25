@@ -23,7 +23,7 @@ export function SplitViewer({
     if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     const nx = Math.min(
-      100,
+      101,
       Math.max(0, ((clientX - rect.left) / rect.width) * 100)
     );
     setX(nx);
