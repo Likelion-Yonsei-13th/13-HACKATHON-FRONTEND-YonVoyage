@@ -9,18 +9,13 @@ import type { FeedItem } from "../_lib/types";
 import { getFeeds, togglePick } from "../_lib/api";
 
 import MasonryGrid from "./masonry-grid";
-import { CardSkeleton } from "./skeletons";
+// import { CardSkeleton } from "./skeletons"; // ❌ 스켈레톤 제거
 import FilterBar from "./filter-bar";
 
 import UnderBar from "@/app/_common/components/under-bar";
 
 export default function GalleryBody() {
-    const router = useRouter(); // ✅
-
-    /** -------------------------------
-     *  로그인: 개발용 가짜 UUID (옵션 A)
-     *  실제 로그인 연동 시 이 훅 교체
-     * -------------------------------- */
+    const router = useRouter();
     const userUUID = useUserUUID(); // "dev-uuid-123"
     const search = useSearchParams();
 
@@ -30,8 +25,10 @@ export default function GalleryBody() {
     const [limit] = useState(DEFAULT_LIMIT);
     const [total, setTotal] = useState(0);
 
-    // 필터 상태 (배타 로직)
-    const [businessType, setBusinessType] = useState<string | undefined>(undefined);
+    // 필터 상태
+    const [businessType, setBusinessType] = useState<string | undefined>(
+        undefined
+    );
     const [pickedOnly, setPickedOnly] = useState(false);
 
     useEffect(() => {
@@ -47,14 +44,6 @@ export default function GalleryBody() {
 
     const canLoadMore = useMemo(() => offset < total, [offset, total]);
     const loaderRef = useRef<HTMLDivElement | null>(null);
-
-    /** 🔹스켈레톤/데이터 배열 타입 통일 */
-    const skeletons: (FeedItem | null)[] = useMemo(
-        () => Array.from({ length: limit }).map(() => null),
-        [limit]
-    );
-    const dataset: (FeedItem | null)[] =
-        loading && items.length === 0 ? skeletons : items;
 
     /** 데이터 로드 */
     const load = async ({ reset = false } = {}) => {
@@ -113,15 +102,12 @@ export default function GalleryBody() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [canLoadMore, loading]);
 
-    /** ------ 배타 로직 핸들러 ------ */
-        // 업종 선택되면 나의픽 해제
+    // ------ 배타 로직 핸들러 ------
     const handleSelectBusinessType = (v?: string) => {
-            setBusinessType(v);
-            if (v) setPickedOnly(false);
-            // 즉시 새 목록 원하면: load({ reset: true });
-        };
+        setBusinessType(v);
+        if (v) setPickedOnly(false);
+    };
 
-    // 나의픽 토글되면 업종 해제 (로그인 필요)
     const handleTogglePickedOnly = () => {
         if (!userUUID) {
             alert("로그인 후 이용해주세요.");
@@ -132,14 +118,11 @@ export default function GalleryBody() {
             if (next) setBusinessType(undefined);
             return next;
         });
-        // 즉시 새 목록 원하면: load({ reset: true });
     };
 
-    // 최신순(초기화) → 둘 다 OFF
     const handleResetLatest = () => {
         setBusinessType(undefined);
         setPickedOnly(false);
-        // load({ reset: true });
     };
 
     /** 카드 좋아요 (낙관적 업데이트) */
@@ -162,22 +145,13 @@ export default function GalleryBody() {
         }
     };
 
-    // ⛔️ 모달 삭제로 불필요해진 핸들러 제거
-    // const handleDeleted = () => {
-    //   load({ reset: true });
-    // };
-
-    /** ✅ 카드 클릭 → 상세 페이지 이동 (+ 다음 2장 id 쿼리로 전달) */
-
+    /** ✅ 카드 클릭 → 상세 페이지 이동 */
     const goDetail = (id: number) => {
-            // 🔹 필터 상태를 쿼리로 추가
-            const query = new URLSearchParams();
-            if (businessType) query.set("businessType", businessType);
-            if (pickedOnly) query.set("pickedOnly", "true");
-
-            router.push(`/gallery/${id}?${query.toString()}`);
-        };
-
+        const query = new URLSearchParams();
+        if (businessType) query.set("businessType", businessType);
+        if (pickedOnly) query.set("pickedOnly", "true");
+        router.push(`/gallery/${id}?${query.toString()}`);
+    };
 
     return (
         <section
@@ -202,9 +176,24 @@ export default function GalleryBody() {
                 </div>
             )}
 
-            <MasonryGrid>
-                {dataset.map((item, i) =>
-                    item ? (
+            {/* ✅ 로딩 중 */}
+            {loading && items.length === 0 && (
+                <div className="w-full flex justify-center items-center py-20 text-gray-500">
+                    불러오는 중...
+                </div>
+            )}
+
+            {/* ✅ 빈 상태 */}
+            {!loading && items.length === 0 && (
+                <div className="w-full flex justify-center items-center py-20 text-gray-500">
+                    등록된 피드가 없습니다.
+                </div>
+            )}
+
+            {/* ✅ 데이터 있을 때 */}
+            {items.length > 0 && (
+                <MasonryGrid>
+                    {items.map((item) => (
                         <div key={`feed-${item.id}`}>
                             <article
                                 onClick={() => goDetail(item.id)}
@@ -223,16 +212,13 @@ export default function GalleryBody() {
                                     className="block w-full h-full object-cover"
                                     loading="lazy"
                                 />
-
                             </article>
                         </div>
-                    ) : (
-                        <CardSkeleton key={`skeleton-${i}`} />
-                    )
-                )}
-            </MasonryGrid>
+                    ))}
+                </MasonryGrid>
+            )}
 
-            {/* 무한 스크롤 트리거는 더 불러올 게 있을 때만 */}
+            {/* 무한 스크롤 트리거 */}
             {canLoadMore && <div ref={loaderRef} className="h-10" />}
 
             {/* ✅ 진짜 끝났을 때만 UnderBar 표시 */}
@@ -241,13 +227,11 @@ export default function GalleryBody() {
                     <UnderBar />
                 </div>
             )}
-
-
         </section>
     );
 }
 
-/** 개발용 가짜 로그인 UUID (옵션 A) */
+/** 개발용 가짜 로그인 UUID */
 function useUserUUID() {
     return "dev-uuid-123";
 }
