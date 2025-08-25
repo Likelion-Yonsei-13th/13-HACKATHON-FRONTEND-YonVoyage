@@ -4,6 +4,26 @@ import { useRef, useState } from "react";
 import type { StepProps } from "./types";
 import { uploadOnboardingImage } from "@/app/_common/apis/onboarding";
 
+async function avifToPng(file: File): Promise<File> {
+  const bitmap = await createImageBitmap(
+    await file.arrayBuffer().then((b) => new Blob([b]))
+  );
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(bitmap, 0, 0);
+  const blob: Blob = await new Promise((resolve, reject) =>
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("toBlob 실패"))),
+      "image/png"
+    )
+  );
+  return new File([blob], file.name.replace(/\.avif$/i, ".png"), {
+    type: "image/png",
+  });
+}
+
 export default function Step4({ value, onChange }: StepProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -12,15 +32,33 @@ export default function Step4({ value, onChange }: StepProps) {
   const pickFile = () => inputRef.current?.click();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0] ?? null;
-    setFile(f);
+    let f = e.target.files?.[0] ?? null;
     if (!f) return;
+
     try {
+      setFile(f); // 미리보기는 원본
+
+      if (f.type === "image/avif") {
+        try {
+          const converted = await avifToPng(f);
+          f = converted;
+          console.log(
+            "[Step4] AVIF → PNG 변환 완료:",
+            converted.name,
+            converted.type
+          );
+        } catch (err) {
+          console.warn("[Step4] AVIF 변환 실패, 원본으로 업로드 시도:", err);
+        }
+      }
+
       setLoading(true);
+      console.log("[Step4] 업로드 시작...");
       const { uploadId } = await uploadOnboardingImage(f);
-      onChange(uploadId); // 부모 answers[3] 등에 저장
+      console.log("[Step4] 업로드 성공! uploadId =", uploadId);
+      onChange(uploadId);
     } catch (err) {
-      console.error(err);
+      console.error("[Step4] 업로드 에러:", err);
       alert("업로드에 실패했습니다. 다시 시도해 주세요.");
     } finally {
       setLoading(false);
@@ -34,12 +72,12 @@ export default function Step4({ value, onChange }: StepProps) {
       <div
         className="rounded-lg text-gray-200"
         style={{
-          width: "454px",
-          height: "356px",
-          minWidth: "280px",
-          borderRadius: "12px",
+          width: 454,
+          height: 356,
+          minWidth: 280,
+          borderRadius: 12,
           backgroundColor: "rgba(33,34,37,1)",
-          padding: "32px",
+          padding: 32,
         }}
       >
         <div className="h-full w-full flex flex-col items-center justify-center gap-5">
@@ -64,7 +102,7 @@ export default function Step4({ value, onChange }: StepProps) {
           <input
             ref={inputRef}
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/webp,image/avif"
             className="hidden"
             onChange={handleFileChange}
             disabled={loading}
