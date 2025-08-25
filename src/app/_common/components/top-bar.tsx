@@ -50,12 +50,14 @@ export default function TopBar({ highlight }: TopBarProps) {
             </div>
 
             {/* 오른쪽 영역(마이페이지 등)은 기존 스타일 유지 */}
-            <div className="flex items-center gap-4">
-                <Link
-                    href="/mypage"
-                    className="no-underline text-white font-inter text-[16px] leading-[18px] tracking-[-0.2px]"
-                >
-                    마이페이지
+            <div className="flex items-center gap-[28px]">
+                <Link href="/mypage" className="bg-transparent p-0 border-0">
+                    <img
+                        src="/svg/Topbar-Mypage.svg"
+                        alt="마이페이지"
+                        width={24}
+                        height={24}
+                    />
                 </Link>
             </div>
         </nav>
