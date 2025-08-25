@@ -1,10 +1,7 @@
-// src/app/(pages)/aistudio/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Image from "next/image";
-
-// APIs
 import {
   uploadImage,
   generateImage,
@@ -13,14 +10,16 @@ import {
   saveGenerated,
   type UploadedImage,
   type GeneratedImage,
+  HISTORY_CAP,
+  hasReachedCap,
+  appendGeneratedWithCap,
+  placeholdersCount,
 } from "@/app/_common/apis/aistudio";
-
-// Components
 import { SplitViewer } from "./components/SplitViewer";
 import { PromptComposer } from "./components/PromptComposer";
 import PaywallModal from "./components/PaywallModal";
+import { UploadPicker } from "./components/UploadPicker"; // ✅ 추가
 
-/** helpers */
 const cx = (...xs: (string | false | undefined)[]) =>
   xs.filter(Boolean).join(" ");
 
@@ -35,8 +34,6 @@ const getUUID = () => {
   return v;
 };
 
-const HISTORY_CAP = 5;
-
 export default function AiStudioPage() {
   const uuid = useMemo(() => getUUID(), []);
   const [uploaded, setUploaded] = useState<UploadedImage[]>([]);
@@ -47,11 +44,8 @@ export default function AiStudioPage() {
     useState<GeneratedImage | null>(null);
   const [loading, setLoading] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
-
-  // 브리지 1회 적용 가드
   const bridgeAppliedRef = useRef(false);
 
-  /** 초기 데이터 로드 */
   useEffect(() => {
     (async () => {
       try {
@@ -60,33 +54,28 @@ export default function AiStudioPage() {
           listGenerated(uuid),
         ]);
         setUploaded(u);
+        if (u.length) setSelectedUploaded(u[0]);
 
-        // 최신 5개만 유지(오른쪽이 최신이 되도록 기존 정렬 그대로 사용)
+        // 최신 5개만 유지, 오른쪽이 최신
         const last5 = g.slice(-HISTORY_CAP);
         setGenerated(last5);
-
-        if (u.length) setSelectedUploaded(u[0]);
-        if (last5.length) setSelectedGenerated(last5[last5.length - 1]); // 가장 오른쪽(최근)
+        if (last5.length) setSelectedGenerated(last5[last5.length - 1]);
       } catch (e) {
-        console.error(e);
+        console.error("[INIT] load error:", e);
       }
     })();
   }, [uuid]);
 
-  /** 온보딩 → AI Studio 브리지(localStorage) 병합 (초기 세팅 이후 한 번만) */
+  // 온보딩 → 브리지 1회 병합
   useEffect(() => {
     if (bridgeAppliedRef.current) return;
-
     try {
       const raw = localStorage.getItem("aistudio_bridge_last");
       if (!raw) return;
-
       const { generatedId, url } = JSON.parse(raw) as {
         generatedId: string;
         url: string;
       };
-
-      // 1) 기존 generated에 병합(중복 제거) + 최대 5개 유지
       setGenerated((prev) => {
         const exists = prev.some((g) => g.id === generatedId);
         const merged = exists
@@ -95,28 +84,26 @@ export default function AiStudioPage() {
               ...prev,
               { id: generatedId, url, createdAt: new Date().toISOString() },
             ];
-        return merged.slice(-HISTORY_CAP); // 오른쪽(끝)이 최신이 되도록 뒤에 붙이고 5개만 유지
+        return merged.slice(-HISTORY_CAP);
       });
-
-      // 2) 우측(결과)로 선택
       setSelectedGenerated({ id: generatedId, url });
-
-      // 3) 사용 후 삭제 + 가드
       localStorage.removeItem("aistudio_bridge_last");
       bridgeAppliedRef.current = true;
     } catch {
-      // noop
+      // ignore
     }
-    // 초기 로드 이후 동작 보장용으로 길이 의존
   }, [generated.length]);
 
   /** 생성 */
   const handleGenerate = useCallback(
     async (prompt: string) => {
       if (!prompt.trim()) return alert("프롬프트를 입력해주세요.");
+      if (!uuid)
+        return alert("로그인이 필요합니다. 닉네임/UUID 설정을 확인해주세요.");
+      if (!selectedUploaded?.id)
+        return alert("왼쪽에 참조 이미지를 먼저 업로드/선택해주세요.");
 
-      // 5개 꽉 차면 유료 팝업
-      if (generated.length >= HISTORY_CAP) {
+      if (hasReachedCap(generated)) {
         setPaywallOpen(true);
         return;
       }
@@ -126,7 +113,7 @@ export default function AiStudioPage() {
         const r = await generateImage({
           uuid,
           prompt,
-          image_id: selectedUploaded?.id,
+          uploaded_image_id: String(selectedUploaded.id),
         });
 
         const item: GeneratedImage = {
@@ -136,17 +123,22 @@ export default function AiStudioPage() {
           createdAt: new Date().toISOString(),
         };
 
-        // 오른쪽 끝에 추가
-        setGenerated((prev) => [...prev, item].slice(-HISTORY_CAP));
+        // 오른쪽 끝에 추가(최대 5개 유지)
+        setGenerated((prev) => appendGeneratedWithCap(prev, item));
         setSelectedGenerated(item);
-      } catch (e) {
-        console.error(e);
-        alert("이미지 생성에 실패했습니다.");
+      } catch (e: any) {
+        console.error("[GENERATE] error:", e);
+        const msg = e?.message || "";
+        if (/401|403/.test(msg)) {
+          alert("로그인이 필요합니다. 닉네임/UUID를 먼저 등록해주세요.");
+        } else {
+          alert("이미지 생성에 실패했습니다.");
+        }
       } finally {
         setLoading(false);
       }
     },
-    [uuid, selectedUploaded, generated.length]
+    [uuid, selectedUploaded, generated]
   );
 
   /** 저장 */
@@ -164,18 +156,33 @@ export default function AiStudioPage() {
     }
   }, [selectedGenerated]);
 
-  /** 히스토리 스트립용 빈칸 개수 */
-  const placeholders = Math.max(0, HISTORY_CAP - generated.length);
+  /** 업로드 추가 핸들러 (UploadPicker에서 호출) */
+  const handleUploadedAdd = useCallback((item: UploadedImage) => {
+    setUploaded((prev) => [item, ...prev]); // 최신 업로드를 앞에 추가
+    setSelectedUploaded(item);
+  }, []);
+
+  const placeholders = placeholdersCount(generated);
 
   return (
     <div className="min-h-dvh w-full text-white">
-      {/* 타이틀 */}
       <h2 className="text-lg sm:text-xl font-semibold mb-4 mt-9">
         내 플레이팅 참고사진 보기
       </h2>
       <div className="h-px w-full bg-white/10 mb-6" />
 
-      {/* Before / After */}
+      {/* ✅ 업로드 영역 */}
+      <UploadPicker
+        uuid={uuid}
+        items={uploaded}
+        selected={selectedUploaded}
+        onUploadedAdd={handleUploadedAdd}
+        onSelect={(it) => setSelectedUploaded(it)}
+        disabled={loading}
+      />
+
+      {/* Before / After 뷰어 */}
+      <div className="mt-6" />
       <SplitViewer
         leftUrl={selectedUploaded?.url}
         rightUrl={selectedGenerated?.url}
@@ -192,7 +199,6 @@ export default function AiStudioPage() {
             className="object-contain"
           />
         </button>
-
         <button
           className="p-2"
           aria-label="저장"
@@ -214,7 +220,6 @@ export default function AiStudioPage() {
         <div className="w-full overflow-x-auto">
           <div className="w-fit mx-auto">
             <div className="flex gap-3 pb-1">
-              {/* Free 플레이스홀더(왼쪽부터 채워짐) */}
               {Array.from({ length: placeholders }).map((_, i) => (
                 <div
                   key={`ph-${i}`}
@@ -229,7 +234,6 @@ export default function AiStudioPage() {
                 </div>
               ))}
 
-              {/* 실제 생성 썸네일(오른쪽이 최신) */}
               {generated.map((img) => (
                 <button
                   key={img.id}
@@ -254,7 +258,7 @@ export default function AiStudioPage() {
         </div>
       </div>
 
-      {/* 프롬프트 + 생성 버튼 (고정/반응형은 컴포넌트 내부 처리) */}
+      {/* 프롬프트 + 생성 */}
       <PromptComposer onSubmit={handleGenerate} loading={loading} />
 
       {/* 하단 여백 */}
