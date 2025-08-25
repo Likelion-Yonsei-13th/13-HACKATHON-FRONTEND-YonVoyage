@@ -9,7 +9,7 @@ const defaultItems: PickItem[] = Array.from({ length: 8 }).map((_, i) => ({
   id: i + 1,
 }));
 
-export default function PickGrid({
+export default function MyPlating({
   items = defaultItems,
   moreHref = "/picks",
 }: {
@@ -33,7 +33,7 @@ export default function PickGrid({
           {/* 헤더: 좌측 타이틀, 우측 상단 버튼 */}
           <div className="mb-8 flex items-center justify-between">
             <h2 className="text-white text-[22px] font-semibold">
-              픽플골라보기
+              내 플레이팅 참고하기
             </h2>
 
             {/* ▶ 검정 배경 + 흰 테두리 + 흰 글씨 pill 버튼 */}

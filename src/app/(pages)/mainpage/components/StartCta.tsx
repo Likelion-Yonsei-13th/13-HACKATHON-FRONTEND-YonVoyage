@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { useRouter } from "next/navigation";
+import styles from "./StartCta.module.css";
 
 type Props = {
   text?: string;
@@ -35,13 +36,19 @@ export default function StartCta({
 
   return (
     <div className="text-center">
-      <p className="text-white/90 text-base md:text-lg">{text}</p>
+      {/* 모듈 클래스 적용 */}
+      <p className={styles["cta-text"]}>{text}</p>
 
-      {/* 문장과 버튼 사이 간격 — 전용 클래스가 강제로 보장 */}
-      <div className="cta-start-wrap flex justify-center">
-        <button type="button" onClick={handleClick} className="cta-start-btn">
+      {/* 모듈 클래스 + Tailwind 같이 사용 가능 */}
+      <div className={`${styles["cta-start-wrap"]} flex justify-center`}>
+        <button
+          type="button"
+          onClick={handleClick}
+          className={styles["cta-start-btn"]}
+        >
           {buttonText}
         </button>
+
         {useUpload && (
           <input
             ref={fileRef}
