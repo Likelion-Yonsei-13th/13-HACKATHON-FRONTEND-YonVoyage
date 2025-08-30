@@ -10,28 +10,27 @@ import Step5 from "./components/Step5";
 import Step6 from "./components/Step6";
 import UserInfo from "./components/UserInfo"; // 닉네임/uuid 등록 카드
 
-// import ProgressBar from "./components/Progressbar";
 import type { StepProps } from "./components/types";
 import {
   generateOnboardingImage,
   getGeneratedImage,
 } from "@/app/_common/apis/onboarding";
 
-/** UserInfo 컴포넌트를 Step 형태로 감싼 래퍼 (StepProps 시그니처 맞추기) */
-function UserInfoStep(_: StepProps) {
+/** UserInfo 컴포넌트를 Step 형태로 래핑(부모 onChange를 그대로 전달) */
+function UserInfoStep(p: StepProps) {
   return (
     <section className="min-h-[60vh] flex flex-col items-center justify-center">
-      <UserInfo />
+      <UserInfo {...p} />
     </section>
   );
 }
 
 /** steps 정의 (UserInfo가 0번째) */
 const steps: Array<(p: StepProps) => JSX.Element> = [
-  UserInfoStep, // 0: 닉네임/uuid 등록
+  UserInfoStep, // 0: 닉네임/uuid 등록 (완료 시 answers[0] = uuid)
   Step1, // 1: 숙련도
   Step2, // 2
-  Step3, // 3
+  Step3, // 3 (복수 선택 가정)
   Step4, // 4: 업로드(answers[4] = uploadId)
   Step5, // 5: 결과 표시(answers[5] = resultUrl)
   Step6, // 6: 완료
@@ -40,14 +39,6 @@ const steps: Array<(p: StepProps) => JSX.Element> = [
 /** 인덱스 상수 */
 const UPLOAD_STEP = 4; // Step4
 const RESULT_STEP = 5; // Step5
-
-// 필수 여부
-const required = steps.map(() => true);
-// UserInfoStep은 자체 버튼으로 처리하므로 필수 검사 제외
-required[0] = false;
-// 업로드/결과 스텝은 다음 버튼에서 직접 처리하므로 필수 검사 제외
-required[UPLOAD_STEP] = false;
-required[RESULT_STEP] = false;
 
 type AnswerMap = Record<number, string | string[] | undefined>;
 
@@ -60,8 +51,14 @@ export default function OnboardingPage() {
   const isLast = i === steps.length - 1;
   const isUploadStep = i === UPLOAD_STEP;
 
+  // 필수 여부 (0번 스텝을 "필수"로 바꿔 등록 완료 후만 진행)
+  const required = steps.map(() => true);
+  // 업로드/결과 스텝은 다음 버튼에서 직접 처리하므로 필수 검사 제외
+  required[UPLOAD_STEP] = false;
+  required[RESULT_STEP] = false;
+
   // 유효성(기존 로직 유지: Step3 복수선택 고려)
-  const isArrayStep = i === 3; // 복수선택 스텝 인덱스가 3이라면 유지
+  const isArrayStep = i === 3; // 복수선택 스텝 인덱스 3
   const isValid = required[i]
     ? isArrayStep
       ? Array.isArray(answers[i]) && (answers[i] as string[]).length > 0
@@ -115,13 +112,6 @@ export default function OnboardingPage() {
 
   return (
     <>
-      {/* 필요하면 진행바 사용
-      <section>
-        <div className="mx-auto w-[450px]" style={{ maxWidth: CONTENT_MAX }}>
-          <ProgressBar current={i} total={steps.length} />
-        </div>
-      </section> */}
-
       <main>
         <div className="mx-auto w-full max-w-[960px] rounded-xl p-6 sm:p-8">
           <Current value={answers[i]} onChange={handleChange} />

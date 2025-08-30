@@ -46,13 +46,9 @@ export default function Step5({ value }: StepProps) {
       <div
         className="rounded-lg overflow-hidden grid place-items-center"
         style={{
-          width: 454,
-          height: 356,
-          minWidth: 280,
-          borderRadius: 12,
-          backgroundColor: "rgba(33, 34, 37, 1)",
-          padding: 20,
-          border: "1px solid rgba(255,255,255,0.15)",
+          width: "100%", // 부모 컨테이너 꽉 채우기
+          maxWidth: 500, // 최대 폭 제한
+          height: "auto",
         }}
       >
         {src && !err ? (
@@ -60,10 +56,9 @@ export default function Step5({ value }: StepProps) {
             src={src}
             alt="생성 결과"
             style={{
-              maxWidth: "100%",
-              maxHeight: "100%",
-              objectFit: "contain",
-              display: "block",
+              width: "100%", // 항상 부모에 맞추기
+              height: "auto", // 비율 유지
+              objectFit: "cover",
             }}
             onLoad={() => setLoaded(true)}
             onError={handleError}
@@ -84,7 +79,7 @@ export default function Step5({ value }: StepProps) {
         </div>
       )}
 
-      {resultUrl && !err && (
+      {/* {resultUrl && !err && (
         <div className="flex items-center gap-3">
           <a
             href={resultUrl}
@@ -102,7 +97,7 @@ export default function Step5({ value }: StepProps) {
             다운로드
           </a>
         </div>
-      )}
+      )} */}
     </section>
   );
 }
