@@ -1,8 +1,20 @@
 // src/app/(pages)/onboarding/components/Step4.tsx
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import type { StepProps } from "./types";
 import { uploadOnboardingImage } from "@/app/_common/apis/onboarding";
+
+// 로컬 uuid 유틸
+function getUUID() {
+  if (typeof window === "undefined") return "";
+  const KEY = "aistudio_uuid";
+  let v = localStorage.getItem(KEY);
+  if (!v) {
+    v = crypto.randomUUID();
+    localStorage.setItem(KEY, v);
+  }
+  return v;
+}
 
 async function avifToPng(file: File): Promise<File> {
   const bitmap = await createImageBitmap(
@@ -27,7 +39,15 @@ async function avifToPng(file: File): Promise<File> {
 export default function Step4({ value, onChange }: StepProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const uuid = useMemo(() => getUUID(), []);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   const pickFile = () => inputRef.current?.click();
 
@@ -36,27 +56,42 @@ export default function Step4({ value, onChange }: StepProps) {
     if (!f) return;
 
     try {
-      setFile(f); // 미리보기는 원본
+      // 미리보기는 현재 스텝에서만 사용
+      const blobUrl = URL.createObjectURL(f);
+      setFile(f);
+      setPreviewUrl(blobUrl);
 
       if (f.type === "image/avif") {
         try {
-          const converted = await avifToPng(f);
-          f = converted;
-          console.log(
-            "[Step4] AVIF → PNG 변환 완료:",
-            converted.name,
-            converted.type
-          );
+          f = await avifToPng(f);
+          console.log("[Step4] AVIF → PNG 변환 완료:", f.name, f.type);
         } catch (err) {
           console.warn("[Step4] AVIF 변환 실패, 원본으로 업로드 시도:", err);
         }
       }
 
       setLoading(true);
-      console.log("[Step4] 업로드 시작...");
-      const { uploadId } = await uploadOnboardingImage(f);
-      console.log("[Step4] 업로드 성공! uploadId =", uploadId);
+      const res = await uploadOnboardingImage(f, uuid); // ← uuid 전달
+      const uploadId = String(res.uploadId ?? "");
+      const serverUrl =
+        res.url && /^https?:\/\//i.test(res.url) ? res.url : undefined;
+
+      // 부모 answers[4]에 업로드 식별자 전달
       onChange(uploadId);
+
+      // 브리지 저장 (blob은 절대 저장하지 않음)
+      const prev = JSON.parse(
+        localStorage.getItem("aistudio_bridge_last") || "{}"
+      );
+      localStorage.setItem(
+        "aistudio_bridge_last",
+        JSON.stringify({
+          ...prev,
+          uploadedId: uploadId,
+          uploadedUrl: serverUrl || undefined,
+          ts: Date.now(),
+        })
+      );
     } catch (err) {
       console.error("[Step4] 업로드 에러:", err);
       alert("업로드에 실패했습니다. 다시 시도해 주세요.");
@@ -86,9 +121,9 @@ export default function Step4({ value, onChange }: StepProps) {
             className="w-[220px] h-[220px] rounded-md bg-[#2B2C2F] hover:bg-[#303135] cursor-pointer flex items-center justify-center overflow-hidden transition"
             title="이미지 선택"
           >
-            {file ? (
+            {file && previewUrl ? (
               <img
-                src={URL.createObjectURL(file)}
+                src={previewUrl}
                 alt="선택된 이미지 미리보기"
                 className="h-full w-full object-cover"
               />

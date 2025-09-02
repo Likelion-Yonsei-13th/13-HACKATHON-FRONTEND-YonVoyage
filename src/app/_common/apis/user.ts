@@ -39,46 +39,46 @@ export async function checkUserByUuid(uuid: string): Promise<CheckUserRes> {
   };
 }
 
-/** 유저 등록: 서버 스펙에 맞춰 uuid + business_type 동시 전송 & 응답 매핑 */
+// src/app/_common/apis/user.ts
 export async function registerUser(
   nickname: string,
   business_type: string,
-  uuid: string
+  uuid?: string
 ): Promise<RegisterUserRes> {
   const url = `/api/user`;
-
-  // 서버가 다양한 키를 기대할 수 있어 호환 키 동시 전송
-  const payload = {
-    nickname,
-    business_type,
-    uuid,
-    user_uuid: uuid,
-    business: business_type,
-    type: business_type,
-  };
-
-  // 프리체크(빈 문자열 차단)
-  if (!nickname?.trim()) throw new Error("nickname is required");
-  if (!business_type?.trim()) throw new Error("business_type is required");
-  if (!uuid?.trim()) throw new Error("uuid is required");
+  const payload: any = { nickname, business_type };
+  if (uuid) {
+    payload.uuid = uuid;
+    payload.user_uuid = uuid; // 백엔드 호환
+  }
 
   const res = await fetch(url, {
     method: "POST",
-    headers: jsonHeaders(),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
+  // 400인데 "이미 존재" 메시지면 멱등 성공 처리
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    if (/already exists/i.test(text)) {
+      // 서버에 이미 존재하므로 곧바로 조회해 성공처럼 돌려줌
+      const ck = await checkUserByUuid(uuid || "");
+      return {
+        success: true,
+        uuid: ck.uuid || uuid || "",
+        nickname,
+        business_type,
+        created_at: new Date().toISOString(),
+      };
+    }
     throw new Error(`register failed (${res.status}): ${text}`);
   }
 
   const data = (await res.json()) as any;
-
-  // 응답 표준화(서버가 success 누락 시 기본 true)
   return {
     success: !!(data.success ?? true),
-    uuid: data.uuid ?? data.user_uuid ?? uuid,
+    uuid: data.uuid ?? data.user_uuid ?? uuid ?? "",
     nickname: data.nickname ?? nickname,
     business_type:
       data.business_type ?? data.business ?? data.type ?? business_type,
