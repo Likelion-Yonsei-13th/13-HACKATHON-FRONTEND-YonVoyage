@@ -42,8 +42,8 @@ export function PromptComposer({
         <Image
           src="/img/ai-studio/button.png"
           alt="생성 버튼"
-          width={20}
-          height={20}
+          width={25}
+          height={25}
           className="object-contain"
         />
       </button>
