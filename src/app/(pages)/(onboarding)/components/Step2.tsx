@@ -1,49 +1,53 @@
+// src/app/(pages)/onboarding/components/Step2.tsx
 import type { StepProps } from "./types";
 
 const OPTIONS = ["원해요", "원치않아요"];
 
 export default function Step2({ value, onChange }: StepProps) {
   return (
-    <section className="min-h-[60vh] flex flex-col items-center justify-center gap-8">
+    <section className="min-h-[60vh] w-full flex flex-col items-center justify-center gap-6 px-4">
       {/* 타이틀 */}
-      <h2 className="text-2xl font-bold text-white">
+      <h2 className="text-white text-[15px] sm:text-xl font-bold text-center">
         내 플레이팅의 문제점을 진단받기
       </h2>
 
-      {/* 카드 */}
       <div
-        className="rounded-lg text-gray-200"
-        style={{
-          width: "454px", // 고정 너비
-          height: "356px", // 고정 높이
-          minWidth: "280px", // 최소 너비
-          borderRadius: "12px", // 모서리
-          backgroundColor: "rgba(33, 34, 37, 100)", // 카드 색상
-          padding: "32px", // 전체 padding
-          paddingBottom: "32px", // 하단 padding
-        }}
+        className="
+          mx-auto w-full max-w-[454px]
+          rounded-xl bg-[#212225]
+          p-5 sm:p-7
+          text-gray-200 shadow-[0_8px_16px_rgba(0,0,0,0.25)]
+        "
       >
-        <ul className="space-y-4 mt-8">
-          {OPTIONS.map((label) => (
-            <li
-              key={label}
-              onClick={() => onChange?.(label)}
-              className={[
-                "flex items-center gap-3 cursor-pointer transition",
-                value === label ? "text-white" : "text-gray-400",
-              ].join(" ")}
-            >
-              {/* 선택된 경우 체크 마크 */}
-              <span
-                className={`text-lg ${
-                  value === label ? "text-green-400" : "text-gray-500"
-                }`}
+        <ul className="mt-2 space-y-2 sm:space-y-3">
+          {OPTIONS.map((label) => {
+            const selected = value === label;
+            return (
+              <li
+                key={label}
+                onClick={() => onChange?.(label)}
+                className={[
+                  "flex items-center gap-3 cursor-pointer rounded-md px-3 py-3 sm:py-3.5 transition",
+                  selected
+                    ? "bg-white/5 text-white"
+                    : "text-gray-300 hover:text-white/90",
+                ].join(" ")}
               >
-                ✓
-              </span>
-              <span>{label}</span>
-            </li>
-          ))}
+                <span
+                  className={[
+                    "shrink-0",
+                    "text-base sm:text-lg",
+                    selected ? "text-emerald-400" : "text-gray-500",
+                  ].join(" ")}
+                >
+                  ✓
+                </span>
+                <span className="text-[12px] sm:text-[12px] md:text-[10px]">
+                  {label}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </section>

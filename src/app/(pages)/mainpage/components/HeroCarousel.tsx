@@ -57,13 +57,13 @@ export default function HeroCarousel() {
   const scrollTo = useCallback((i: number) => embla?.scrollTo(i), [embla]);
 
   return (
-    <section className="relative w-full px-6">
-      {/* 뷰포트 */}
-      <div className="overflow-hidden rounded-2xl" ref={viewportRef}>
+    <section className="relative w-full">
+      <div className="overflow-hidden " ref={viewportRef}>
         <div className="flex touch-pan-y">
           {slides.map((src, i) => (
             <div key={i} className="min-w-0 flex-[0_0_100%]">
-              <div className="relative w-full aspect-[16/9]">
+              {/* 모바일은 더 높게(커보이게), 데스크톱은 16:9 */}
+              <div className="relative w-full aspect-[4/3] sm:aspect-[16/9]">
                 <Image
                   src={src}
                   alt={`Slide ${i + 1}`}
@@ -78,24 +78,23 @@ export default function HeroCarousel() {
         </div>
       </div>
 
-      {/* 좌우 화살표: 섹션 padding과 정렬되도록 left/right-6 */}
+      {/* 화살표/도트는 컨테이너 안쪽으로 */}
       <button
         onClick={prev}
         aria-label="이전 슬라이드"
-        className="absolute top-1/2 -translate-y-1/2 left-6 z-30 h-10 w-10 flex items-center justify-center bg-transparent"
+        className="absolute top-1/2 -translate-y-1/2 left-3 sm:left-6 z-30 h-10 w-10 flex items-center justify-center"
       >
         <Arrow dir="left" />
       </button>
       <button
         onClick={next}
         aria-label="다음 슬라이드"
-        className="absolute top-1/2 -translate-y-1/2 right-6 z-30 h-10 w-10 flex items-center justify-center bg-transparent"
+        className="absolute top-1/2 -translate-y-1/2 right-3 sm:right-6 z-30 h-10 w-10 flex items-center justify-center"
       >
         <Arrow dir="right" />
       </button>
 
-      {/* 도트 */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5">
+      <div className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5">
         {snaps.map((_, i) => (
           <button
             key={i}
