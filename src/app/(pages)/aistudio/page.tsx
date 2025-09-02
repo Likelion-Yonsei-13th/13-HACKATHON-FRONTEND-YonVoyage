@@ -465,7 +465,6 @@ export default function AiStudioPage() {
                   viewMode === "split" ? "단일 보기로" : "비교(스플릿) 보기로"
                 }
               >
-                {/* 아이콘 파일이 없으면 텍스트 노출 */}
                 <Image
                   src={COMPARE_ICON}
                   alt="비교"
@@ -474,7 +473,6 @@ export default function AiStudioPage() {
                   className="object-contain hidden sm:block"
                   style={{ width: "auto", height: "auto" }}
                   onError={(e) => {
-                    // 아이콘 없으면 텍스트로 대체
                     (e.currentTarget.parentElement as HTMLElement).textContent =
                       viewMode === "split" ? "단일" : "비교";
                   }}
@@ -503,8 +501,8 @@ export default function AiStudioPage() {
                 <Image
                   src="/img/ai-studio/download.png"
                   alt="저장"
-                  width={18}
-                  height={18}
+                  width={16}
+                  height={16}
                   className="object-contain"
                   style={{ width: "auto", height: "auto" }}
                 />
