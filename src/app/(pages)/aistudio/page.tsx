@@ -1,3 +1,4 @@
+// src/app/(pages)/aistudio/page.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
@@ -23,6 +24,7 @@ const cx = (...xs: (string | false | undefined)[]) =>
   xs.filter(Boolean).join(" ");
 
 const TILE_CLS = "h-[137px] w-[119px]";
+const COMPARE_ICON = "/img/ai-studio/compare.png"; // 없으면 텍스트 버튼이 보이게 처리
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
 const toAbsolute = (u?: string) =>
@@ -49,7 +51,8 @@ const getUUID = () => {
   return v;
 };
 
-const LAST_LEFT_KEY = "aistudio_last_left"; // { type:'generated'|'uploaded', id, url }
+// 왼쪽(베이스) 복원용
+const LAST_BASE_KEY = "aistudio_last_base"; // { id, url }
 const LAST_UPLOAD_KEY = "aistudio_last_uploaded"; // { id, url, ts }
 
 // ---- 폴링 유틸 ----
@@ -72,9 +75,7 @@ async function waitForGeneratedUrl(
       const list = await listGenerated(uuid);
       const found = list.find((x) => String(x.id) === String(id));
       if (found?.url) return found.url;
-    } catch {
-      // 일시 오류는 무시하고 재시도
-    }
+    } catch {}
     await sleep(intervalMs);
   }
   return null;
@@ -91,6 +92,28 @@ function getLastUploadedId(): string | null {
   }
 }
 
+/** 단일 이미지 스테이지 (16:9, object-contain) */
+function SingleStage({ imgUrl }: { imgUrl?: string }) {
+  return (
+    <div
+      className="relative w-full rounded-lg bg-[#181a1b] border border-white/10 overflow-hidden"
+      style={{ aspectRatio: "16 / 9" }}
+    >
+      {imgUrl ? (
+        <img
+          src={imgUrl}
+          alt="preview"
+          className="absolute inset-0 h-full w-full object-contain"
+        />
+      ) : (
+        <div className="absolute inset-0 grid place-items-center text-sm text-white/60">
+          결과 이미지가 없습니다.
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AiStudioPage() {
   const uuid = useMemo(() => getUUID(), []);
   const [generated, setGenerated] = useState<GeneratedImage[]>([]);
@@ -100,15 +123,19 @@ export default function AiStudioPage() {
   const [selectedUploaded, setSelectedUploaded] =
     useState<UploadedImage | null>(null);
 
-  // 좌측에 표시할 URL
+  // 왼쪽(베이스) / 오른쪽(생성 결과)
   const [leftUrl, setLeftUrl] = useState<string | undefined>(undefined);
+  const [rightUrl, setRightUrl] = useState<string | undefined>(undefined);
+
+  // 보기 모드: 기본은 단일(single), 버튼으로 split 전환
+  const [viewMode, setViewMode] = useState<"single" | "split">("single");
 
   const [loading, setLoading] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [composerKey, setComposerKey] = useState(0);
+  const [composerKey, setComposerKey] = useState(0); // 전송 후 프롬프트 비우기용
 
-  // 초기 로드(업로드/생성 목록 + 좌측 복원)
+  // 초기 로드(업로드/생성 목록 + 왼쪽 복원)
   useEffect(() => {
     (async () => {
       try {
@@ -121,24 +148,15 @@ export default function AiStudioPage() {
         setGenerated(last5);
         if (last5.length) setSelectedGenerated(last5[last5.length - 1]);
 
-        // 좌측 복원: localStorage > 최근 생성 > 최근 업로드
+        // 왼쪽 복원: localStorage(베이스) > 최근 업로드
         let initialLeft: string | undefined;
-
         try {
-          const raw = localStorage.getItem(LAST_LEFT_KEY);
+          const raw = localStorage.getItem(LAST_BASE_KEY);
           if (raw) {
-            const saved = JSON.parse(raw) as {
-              type: "generated" | "uploaded";
-              id?: string;
-              url?: string;
-            };
+            const saved = JSON.parse(raw) as { id?: string; url?: string };
             if (saved?.url) initialLeft = saved.url;
           }
         } catch {}
-
-        if (!initialLeft && last5.length) {
-          initialLeft = last5[last5.length - 1]?.url;
-        }
 
         if (!initialLeft && u.length) {
           const lastUp = u[u.length - 1];
@@ -153,7 +171,7 @@ export default function AiStudioPage() {
     })();
   }, [uuid]);
 
-  // 파일 업로드 공통 처리
+  // 파일 업로드 공통 처리 (왼쪽=업로드, 오른쪽은 비움, 단일 모드로 전환)
   const doUpload = useCallback(
     async (file: File) => {
       setLoading(true);
@@ -166,12 +184,11 @@ export default function AiStudioPage() {
         };
         setSelectedUploaded(uploadedItem);
         setLeftUrl(url);
+        setRightUrl(undefined);
         setSelectedGenerated(null);
+        setViewMode("single");
 
-        localStorage.setItem(
-          LAST_LEFT_KEY,
-          JSON.stringify({ type: "uploaded", id, url })
-        );
+        localStorage.setItem(LAST_BASE_KEY, JSON.stringify({ id, url }));
         localStorage.setItem(
           LAST_UPLOAD_KEY,
           JSON.stringify({ id, url, ts: Date.now() })
@@ -252,9 +269,7 @@ export default function AiStudioPage() {
         );
         return String(last.id);
       }
-    } catch {
-      /* ignore */
-    }
+    } catch {}
 
     // 마지막 보루: 현재 화면 이미지를 재업로드해서 id 생성
     const viaProxy = await proxyUploadCurrentLeft();
@@ -262,7 +277,7 @@ export default function AiStudioPage() {
     return null;
   }, [selectedUploaded, uuid, proxyUploadCurrentLeft]);
 
-  // ---- 생성 로직: url 폴링 후 반영 ----
+  // ---- 생성 로직: url 폴링 후 반영 (오른쪽만 갱신, 기본은 단일 모드) ----
   const handleGenerate = useCallback(
     async (prompt: string) => {
       console.log("[UI] submit prompt =>", prompt);
@@ -298,7 +313,7 @@ export default function AiStudioPage() {
           });
         }
 
-        // 3) 상태 반영
+        // 3) 상태 반영 (왼쪽은 유지, 오른쪽만 갱신)
         if (!finalUrl) {
           alert(
             "이미지 생성이 지연되고 있어요. 잠시 후 목록에서 확인해 주세요."
@@ -314,11 +329,11 @@ export default function AiStudioPage() {
         };
         setGenerated((prev) => appendGeneratedWithCap(prev, item));
         setSelectedGenerated(item);
-        setLeftUrl(finalUrl);
-        localStorage.setItem(
-          LAST_LEFT_KEY,
-          JSON.stringify({ type: "generated", id: r.id, url: finalUrl })
-        );
+        setRightUrl(finalUrl);
+
+        // 기본은 단일 뷰(결과만 크게). 스플릿은 버튼으로.
+        setViewMode("single");
+        setComposerKey((k) => k + 1); // 프롬프트 비우기
       } catch (e: any) {
         console.error("[GENERATE] error:", e);
         const msg = e?.message || "";
@@ -328,7 +343,6 @@ export default function AiStudioPage() {
       } finally {
         setLoading(false);
       }
-      setComposerKey((k) => k + 1);
     },
     [uuid, generated, ensureBaseUploadId]
   );
@@ -348,7 +362,18 @@ export default function AiStudioPage() {
   }, [selectedGenerated]);
 
   const placeholders = placeholdersCount(generated);
-  const viewerVisible = !!leftUrl;
+  const viewerVisible = !!(leftUrl || rightUrl);
+
+  // 스플릿 토글
+  const toggleSplit = () => {
+    if (!leftUrl || !rightUrl) {
+      alert(
+        "비교 모드는 업로드 이미지와 생성 결과가 모두 있을 때만 가능합니다."
+      );
+      return;
+    }
+    setViewMode((m) => (m === "single" ? "split" : "single"));
+  };
 
   return (
     <div className="min-h-dvh w-full text-white">
@@ -360,7 +385,7 @@ export default function AiStudioPage() {
       {/* 초기 업로드 박스 */}
       {!viewerVisible && (
         <div
-          className="relative w/full rounded-lg bg-[#181a1b] border border-white/10 overflow-hidden"
+          className="relative w-full rounded-lg bg-[#181a1b] border border-white/10 overflow-hidden"
           style={{ aspectRatio: "16 / 9" }}
           onClick={onClickCenterUpload}
           onDrop={onDrop}
@@ -397,7 +422,11 @@ export default function AiStudioPage() {
       {/* 뷰어 & 툴바 */}
       {viewerVisible && (
         <>
-          <SplitViewer leftUrl={leftUrl} />
+          {viewMode === "single" ? (
+            <SingleStage imgUrl={rightUrl || leftUrl} />
+          ) : (
+            <SplitViewer leftUrl={leftUrl} rightUrl={rightUrl} />
+          )}
 
           <div className="flex items-center justify-between gap-4 text-white/70 text-sm mt-2">
             <div className="flex items-center gap-2">
@@ -420,7 +449,41 @@ export default function AiStudioPage() {
               />
             </div>
 
-            <div className="flex items-center justify-end gap-4">
+            <div className="flex items-center justify-end gap-2 sm:gap-4">
+              {/* 비교(스플릿) 토글 버튼 */}
+              <button
+                className={cx(
+                  "p-2 rounded-md border",
+                  viewMode === "split"
+                    ? "border-emerald-500"
+                    : "border-white/20",
+                  (!leftUrl || !rightUrl) && "opacity-50 cursor-not-allowed"
+                )}
+                onClick={toggleSplit}
+                aria-label="비교 모드"
+                title={
+                  viewMode === "split" ? "단일 보기로" : "비교(스플릿) 보기로"
+                }
+              >
+                {/* 아이콘 파일이 없으면 텍스트 노출 */}
+                <Image
+                  src={COMPARE_ICON}
+                  alt="비교"
+                  width={22}
+                  height={22}
+                  className="object-contain hidden sm:block"
+                  style={{ width: "auto", height: "auto" }}
+                  onError={(e) => {
+                    // 아이콘 없으면 텍스트로 대체
+                    (e.currentTarget.parentElement as HTMLElement).textContent =
+                      viewMode === "split" ? "단일" : "비교";
+                  }}
+                />
+                <span className="sm:hidden text-xs">
+                  {viewMode === "split" ? "단일" : "비교"}
+                </span>
+              </button>
+
               <button className="p-2" aria-label="보기">
                 <Image
                   src="/img/ai-studio/gallery.png"
@@ -478,7 +541,11 @@ export default function AiStudioPage() {
                 return (
                   <button
                     key={img.id}
-                    onClick={() => setSelectedGenerated(img)}
+                    onClick={() => {
+                      setSelectedGenerated(img);
+                      setRightUrl(img.url); // 썸네일 클릭 시 결과를 오른쪽/단일로 반영
+                      setViewMode("single");
+                    }}
                     className={cx(
                       "relative shrink-0 rounded border overflow-hidden transition hover:scale-[1.02]",
                       TILE_CLS,
@@ -507,7 +574,7 @@ export default function AiStudioPage() {
         </div>
       </div>
 
-      {/* 프롬프트 UI */}
+      {/* 프롬프트 UI (key 바꿔서 전송 후 비우기) */}
       {viewerVisible ? (
         <PromptComposer
           key={composerKey}
