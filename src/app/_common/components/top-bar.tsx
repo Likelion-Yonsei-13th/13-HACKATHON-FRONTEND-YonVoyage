@@ -4,16 +4,20 @@
 import Link from "next/link";
 import clsx from "clsx";
 
-type TopBarProps = { highlight?: "gallery" | "aistudio" };
+type TopBarProps = {
+  highlight?: "gallery" | "aistudio";
+};
 
 export default function TopBar({ highlight }: TopBarProps) {
   return (
-    <nav className="w-full bg-black full-bleed">
-      <div className="h-[62px] flex items-center justify-between">
-        <div className="flex items-center gap-6">
+    // ✅ 바깥은 화면 전체 배경
+    <header className="w-full bg-black">
+      {/* ✅ 내부 정렬/패딩은 app-shell에서 통일 */}
+      <nav className="app-shell h-[62px] flex items-center justify-between">
+        <div className="flex items-center gap-[28px]">
           <Link
             href="/mainpage"
-            className="no-underline text-[#00D560] font-inter font-bold text-[22px] sm:text-[25px]"
+            className="no-underline text-[#00D560] font-inter font-bold text-[25px] leading-[28px] tracking-[-0.5px]"
           >
             픽플
           </Link>
@@ -21,7 +25,7 @@ export default function TopBar({ highlight }: TopBarProps) {
           <Link
             href="/gallery"
             className={clsx(
-              "no-underline font-inter text-[14px] sm:text-[16px]",
+              "no-underline font-inter text-[16px] leading-[18px] tracking-[-0.2px]",
               highlight === "gallery" ? "text-[#00D560]" : "text-white"
             )}
           >
@@ -31,7 +35,7 @@ export default function TopBar({ highlight }: TopBarProps) {
           <Link
             href="/aistudio"
             className={clsx(
-              "no-underline font-inter text-[14px] sm:text-[16px]",
+              "no-underline font-inter text-[16px] leading-[18px] tracking-[-0.2px]",
               highlight === "aistudio" ? "text-[#00D560]" : "text-white"
             )}
           >
@@ -39,7 +43,7 @@ export default function TopBar({ highlight }: TopBarProps) {
           </Link>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-[28px]">
           <Link href="/mypage" className="bg-transparent p-0 border-0">
             <img
               src="/svg/Topbar-Mypage.svg"
@@ -49,7 +53,7 @@ export default function TopBar({ highlight }: TopBarProps) {
             />
           </Link>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </header>
   );
 }

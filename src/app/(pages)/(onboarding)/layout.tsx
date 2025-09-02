@@ -10,19 +10,13 @@ export default function OnboardingLayout({
 }) {
   return (
     <div className="min-h-dvh flex flex-col bg-[#141415] text-white">
-      <header className="w-full">
-        <div className="app-shell">
-          <TopBar />
-        </div>
-      </header>
+      <TopBar />
 
       <main className="flex-1 w-full">
-        <div className="app-shell px-6 sm:px-10 lg:px-16">{children}</div>
+        <div className="app-shell">{children}</div>
       </main>
 
-      <footer className="w-full mt-10">
-        <UnderBar />
-      </footer>
+      <UnderBar />
     </div>
   );
 }
