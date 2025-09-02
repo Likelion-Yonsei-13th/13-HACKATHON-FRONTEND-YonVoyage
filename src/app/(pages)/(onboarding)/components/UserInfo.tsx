@@ -103,7 +103,7 @@ export default function UserInfo({ onChange }: StepProps) {
           </span>
         )}
       </p> */}
-      개발에서만 노출하면 좋아요
+
       {process.env.NODE_ENV === "development" && (
         <button
           type="button"

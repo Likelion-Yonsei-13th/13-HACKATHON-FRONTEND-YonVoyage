@@ -1,23 +1,14 @@
-// src/app/_common/apis/aistudio.ts
-export type UploadedImage = { id: string; url: string; createdAt?: string };
+export type UploadedImage = {
+  id: string;
+  url: string;
+  createdAt?: string;
+};
+
 export type GeneratedImage = {
   id: string;
   url: string;
   createdAt?: string;
   prompt?: string;
-};
-
-type ServerUploaded = {
-  id?: number | string;
-  uuid?: string;
-  // 서버가 이 중 아무거나로 줄 수 있음
-  image?: string;
-  url?: string;
-  uploaded_image?: string;
-  uploaded_image_url?: string;
-  path?: string;
-  uploaded_at?: string;
-  created_at?: string;
 };
 
 export const HISTORY_CAP = 5;
@@ -62,17 +53,20 @@ async function okOrThrow(res: Response, fallback = "request failed") {
   );
 }
 
-/** 업로드 */
+/** 내부 라우트만 호출 (프록시 경유) */
 export async function uploadImage(file: File, uuid?: string) {
   const fd = new FormData();
   fd.append("file", file);
   if (uuid) fd.append("uuid", uuid);
 
-  const res = await fetch(`/api/studio/upload`, { method: "POST", body: fd });
+  // 업로드는 /api/studio/upload 경로 사용
+  const res = await fetch(`/api/studio/upload`, {
+    method: "POST",
+    body: fd,
+  });
   await okOrThrow(res, "upload failed");
 
   const raw = (await res.json()) as any;
-  // ← 서버/프록시가 어떤 키로 주든 url/id를 뽑아내기
   const id = String(
     raw?.id ?? raw?.uploaded_id ?? raw?.image_id ?? crypto.randomUUID()
   );
@@ -86,56 +80,104 @@ export async function uploadImage(file: File, uuid?: string) {
   return { id, url } as { id: string; url: string };
 }
 
-/** 생성 요청 */
+/** { uuid, prompt, uploaded_image_id } */
 export async function generateImage(payload: {
   uuid: string;
   prompt: string;
   uploaded_image_id?: string;
 }) {
-  const res = await fetch(`/api/studio/generate`, {
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[API] /api/aistudio/generate payload", {
+      uuid: payload.uuid,
+      uploaded_image_id: payload.uploaded_image_id,
+      prompt_preview: (payload.prompt || "").slice(0, 200), // 너무 길면 미리보기만
+    });
+  }
+
+  const res = await fetch(`/api/aistudio/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   await okOrThrow(res, "generate failed");
-  return (await res.json()) as { id: string; url: string };
+
+  // 서버가 때때로 url을 비울 수 있어 옵셔널 처리
+  return (await res.json()) as { id: string; url?: string };
 }
 
-/** 업로드 목록 (POST 명세) */
+/** 서버 응답 타입들(키가 들쭉날쭉할 때를 대비) */
+type ServerUploaded = {
+  id?: number | string;
+  url?: string;
+  image?: string;
+  uploaded_image?: string;
+  uploaded_image_url?: string;
+  path?: string;
+  uploaded_at?: string;
+  created_at?: string;
+};
+
+type ServerGenerated = {
+  id?: number | string;
+  url?: string;
+  image?: string;
+  generated_image?: string;
+  generated_image_url?: string;
+  path?: string;
+  created_at?: string;
+  uploaded_at?: string;
+  prompt?: string;
+};
+
 export async function listUploaded(uuid?: string) {
-  const res = await fetch(`/api/studio/uploaded/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-    body: JSON.stringify(uuid ? { uuid, user_uuid: uuid } : {}),
-  });
+  const q = uuid ? `?uuid=${encodeURIComponent(uuid)}` : "";
+  const res = await fetch(`/api/aistudio/uploaded/${q}`, { cache: "no-store" });
   await okOrThrow(res, "list uploaded failed");
   const data = (await res.json()) as ServerUploaded[];
 
-  // 방어적 매핑: url 후보들을 우선순위로 스캔
-  return data.map((it) => {
-    const url =
-      it.url ??
-      it.image ??
-      it.uploaded_image_url ??
-      it.uploaded_image ??
-      it.path ??
-      "";
-    const createdAt = it.uploaded_at ?? it.created_at ?? undefined;
-    return { id: String(it.id ?? crypto.randomUUID()), url, createdAt };
-  }) as UploadedImage[];
+  return (Array.isArray(data) ? data : [])
+    .map((it) => {
+      const url =
+        it.url ??
+        it.image ??
+        it.uploaded_image_url ??
+        it.uploaded_image ??
+        it.path ??
+        "";
+      if (!url) return null;
+      const createdAt = it.uploaded_at ?? it.created_at ?? undefined;
+      return { id: String(it.id ?? crypto.randomUUID()), url, createdAt };
+    })
+    .filter(Boolean) as UploadedImage[];
 }
 
-/** 생성 목록 (POST 명세) */
 export async function listGenerated(uuid?: string) {
-  const res = await fetch(`/api/studio/generated/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  const q = uuid ? `?uuid=${encodeURIComponent(uuid)}` : "";
+  const res = await fetch(`/api/aistudio/generated/${q}`, {
     cache: "no-store",
-    body: JSON.stringify(uuid ? { uuid, user_uuid: uuid } : {}),
   });
   await okOrThrow(res, "list generated failed");
-  return (await res.json()) as GeneratedImage[];
+  const data = (await res.json()) as ServerGenerated[];
+
+  return (Array.isArray(data) ? data : [])
+    .map((it) => {
+      const url =
+        it.url ??
+        it.image ??
+        it.generated_image_url ??
+        it.generated_image ??
+        it.path ??
+        "";
+      if (!url) return null;
+      const createdAt = it.created_at ?? it.uploaded_at ?? undefined;
+      return {
+        id: String(it.id ?? crypto.randomUUID()),
+        url,
+        createdAt,
+        prompt: it.prompt,
+      };
+    })
+    .filter(Boolean) as GeneratedImage[];
 }
 
 export async function listGeneratedLimited(uuid?: string, cap = HISTORY_CAP) {
