@@ -3,20 +3,17 @@
 
 import { useCallback, useRef, useState } from "react";
 
-/** 하드코딩(기본) 이미지 경로 — /public 아래에 넣어두면 됨 */
 const LEFT_SRC_DEFAULT = "/img/mainpage/before.png";
 const RIGHT_SRC_DEFAULT = "/img/mainpage/after.png";
 
-export function SplitViewer({
-  leftUrl,
-  rightUrl,
-}: {
-  /** 없으면 LEFT_SRC_DEFAULT 사용 */
+type Props = {
   leftUrl?: string;
-  /** 없으면 RIGHT_SRC_DEFAULT 사용 */
   rightUrl?: string;
-}) {
-  const [x, setX] = useState(50); // %
+  className?: string; // ← 추가
+};
+
+export function SplitViewer({ leftUrl, rightUrl, className }: Props) {
+  const [x, setX] = useState(50);
   const ref = useRef<HTMLDivElement | null>(null);
 
   const drag = (clientX: number) => {
@@ -30,42 +27,37 @@ export function SplitViewer({
   };
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (e.buttons !== 1) return; // 드래그 중일 때만
+    if (e.buttons !== 1) return;
     drag(e.clientX);
   }, []);
-
   const onTouchMove = useCallback((e: React.TouchEvent) => {
     drag(e.touches[0].clientX);
   }, []);
 
-  // ✅ 하드코딩 기본값으로 대체
   const leftSrc = leftUrl || LEFT_SRC_DEFAULT;
   const rightSrc = rightUrl || RIGHT_SRC_DEFAULT;
 
   return (
     <div
       ref={ref}
-      className="relative w-full rounded-lg bg-[#181a1b] border border-white/10 overflow-hidden select-none"
+      className={`relative w-full rounded-lg bg-[#181a1b] border border-white/10 overflow-hidden select-none ${
+        className || ""
+      }`}
       style={{ aspectRatio: "16 / 9" }}
       onMouseMove={onMouseMove}
       onTouchMove={onTouchMove}
     >
-      {/* left (배경) */}
       <img
         src={leftSrc}
         alt="left"
         className="absolute inset-0 h-full w-full object-contain"
       />
-
-      {/* right (겹쳐서 clip) */}
       <img
         src={rightSrc}
         alt="right"
         className="absolute inset-0 h-full w-full object-contain"
         style={{ clipPath: `inset(0 0 0 ${x}%)` }}
       />
-
-      {/* center handle */}
       <div
         className="absolute inset-y-0 cursor-ew-resize"
         style={{ left: `${x}%`, transform: "translateX(-50%)" }}
