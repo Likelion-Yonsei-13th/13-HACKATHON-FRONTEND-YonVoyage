@@ -27,7 +27,7 @@ export default function Step2({ value, onChange }: StepProps) {
           {OPTIONS.map((label) => (
             <li
               key={label}
-              onClick={() => onChange(label)}
+              onClick={() => onChange?.(label)}
               className={[
                 "flex items-center gap-3 cursor-pointer transition",
                 value === label ? "text-white" : "text-gray-400",

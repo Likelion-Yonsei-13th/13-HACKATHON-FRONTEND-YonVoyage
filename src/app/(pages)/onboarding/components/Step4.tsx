@@ -43,6 +43,10 @@ export default function Step4({ value, onChange }: StepProps) {
   const [loading, setLoading] = useState(false);
   const uuid = useMemo(() => getUUID(), []);
 
+  // ✅ onChange 안전 래퍼 (없으면 no-op)
+  const emit = onChange ?? (() => {});
+
+  // blob URL 정리
   useEffect(() => {
     return () => {
       if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
@@ -56,11 +60,13 @@ export default function Step4({ value, onChange }: StepProps) {
     if (!f) return;
 
     try {
-      // 미리보기는 현재 스텝에서만 사용
+      // 이전 미리보기 정리 후 새 URL 설정
+      if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
       const blobUrl = URL.createObjectURL(f);
       setFile(f);
       setPreviewUrl(blobUrl);
 
+      // AVIF → PNG 변환 시도
       if (f.type === "image/avif") {
         try {
           f = await avifToPng(f);
@@ -73,11 +79,16 @@ export default function Step4({ value, onChange }: StepProps) {
       setLoading(true);
       const res = await uploadOnboardingImage(f, uuid); // ← uuid 전달
       const uploadId = String(res.uploadId ?? "");
-      const serverUrl =
-        res.url && /^https?:\/\//i.test(res.url) ? res.url : undefined;
 
-      // 부모 answers[4]에 업로드 식별자 전달
-      onChange(uploadId);
+      // ✅ 타입에 맞게 previewUrl 사용
+      const serverUrl =
+        typeof res.previewUrl === "string" &&
+        /^https?:\/\//i.test(res.previewUrl)
+          ? res.previewUrl
+          : undefined;
+
+      // 부모에 업로드 식별자 전달
+      emit(uploadId);
 
       // 브리지 저장 (blob은 절대 저장하지 않음)
       const prev = JSON.parse(

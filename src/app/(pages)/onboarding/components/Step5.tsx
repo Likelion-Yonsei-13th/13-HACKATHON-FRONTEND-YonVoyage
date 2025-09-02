@@ -7,7 +7,6 @@ export default function Step5({ value }: StepProps) {
   const resultUrl =
     typeof value === "string" && value.trim().length > 0 ? value.trim() : "";
 
-  // 🔸 브리지에 결과 URL을 merge 저장(덮어쓰기 방지)
   useEffect(() => {
     if (!resultUrl) return;
     const prev = JSON.parse(
