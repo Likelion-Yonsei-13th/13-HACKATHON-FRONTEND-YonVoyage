@@ -1,4 +1,3 @@
-// src/app/(pages)/onboarding/page.tsx
 "use client";
 
 import { JSX, useState } from "react";
@@ -10,6 +9,7 @@ import Step5 from "./components/Step5";
 import Step6 from "./components/Step6";
 import UserInfo from "./components/UserInfo";
 import type { StepProps } from "./components/types";
+import StepNav from "./components/StepNav";
 import {
   generateOnboardingImage,
   getGeneratedImage,
@@ -47,11 +47,12 @@ export default function OnboardingPage() {
   const isLast = i === steps.length - 1;
   const isUploadStep = i === UPLOAD_STEP;
 
+  // 필수 응답 여부(업로드/결과 스텝은 선택)
   const required = steps.map(() => true);
   required[UPLOAD_STEP] = false;
   required[RESULT_STEP] = false;
 
-  const isArrayStep = i === 3;
+  const isArrayStep = i === 3; // Step3만 다중 선택이라고 가정
   const isValid = required[i]
     ? isArrayStep
       ? Array.isArray(answers[i]) && (answers[i] as string[]).length > 0
@@ -59,8 +60,10 @@ export default function OnboardingPage() {
     : true;
 
   const isNextDisabled = isLast ? true : !isValid || submitting;
+
   const handleChange = (val: string | string[]) =>
     setAnswers((prev) => ({ ...prev, [i]: val }));
+
   const goPrev = () => setI((s) => Math.max(0, s - 1));
 
   const goNext = async () => {
@@ -77,10 +80,11 @@ export default function OnboardingPage() {
         const { generated_image_id } = await generateOnboardingImage(uploadId);
         // 2) 결과 URL 조회
         const { url } = await getGeneratedImage(generated_image_id);
-        // Step5 표시 값
+
+        // Step5(결과) 표시용 값 저장
         setAnswers((prev) => ({ ...prev, [RESULT_STEP]: url }));
 
-        // ✅ 기존 브리지 유지 + 결과만 merge (uploadedUrl 보존)
+        // 브리지를 유지하며 결과만 merge
         const prev = JSON.parse(
           localStorage.getItem("aistudio_bridge_last") || "{}"
         );
@@ -105,41 +109,27 @@ export default function OnboardingPage() {
     setI((s) => Math.min(steps.length - 1, s + 1));
   };
 
-  const CONTENT_MAX = 1920;
-
   return (
     <>
       <main>
+        {/* 본문 컨테이너: 960px까지 중앙 정렬 + 반응형 패딩 */}
         <div className="mx-auto w-full max-w-[960px] rounded-xl p-6 sm:p-8">
           <Current value={answers[i]} onChange={handleChange} />
         </div>
       </main>
 
+      {/* 하단 내비게이션(반응형, 재사용 컴포넌트) */}
       {!isLast && (
-        <section className="mb-12">
-          <div className="mx-auto w-[660px]" style={{ maxWidth: CONTENT_MAX }}>
-            <div className="flex items-stretch gap-4 sm:gap-5">
-              {!isUploadStep && (
-                <button
-                  type="button"
-                  onClick={goPrev}
-                  disabled={i === 0 || submitting}
-                  className="h-12 flex-1 rounded-md bg-neutral-700 text-neutral-200 transition disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  이전
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={goNext}
-                disabled={isNextDisabled}
-                className="h-12 flex-1 rounded-md bg-emerald-500 text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isUploadStep && submitting ? "보정 중…" : "다음"}
-              </button>
-            </div>
-          </div>
-        </section>
+        <StepNav
+          showPrev={!isUploadStep}
+          onPrev={goPrev}
+          onNext={goNext}
+          prevDisabled={i === 0 || submitting}
+          nextDisabled={isNextDisabled}
+          nextLabel="다음"
+          loadingLabel="보정 중…"
+          loading={isUploadStep && submitting}
+        />
       )}
     </>
   );
