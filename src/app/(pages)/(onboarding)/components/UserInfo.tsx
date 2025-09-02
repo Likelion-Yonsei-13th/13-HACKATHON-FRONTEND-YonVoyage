@@ -94,7 +94,7 @@ export default function UserInfo({ onChange }: StepProps) {
 
   return (
     <section className="w-full max-w-[560px] mx-auto">
-      <h2 className="text-2xl font-semibold mb-4">사용자 등록</h2>
+      {/* <h2 className="text-2xl font-semibold mb-4">사용자 등록</h2>
       <p className="text-sm text-neutral-400 mb-6">
         로컬 UUID: <span className="font-mono break-all">{localUuid}</span>
         {exists === true && (
@@ -102,9 +102,8 @@ export default function UserInfo({ onChange }: StepProps) {
             이미 등록된 사용자입니다.
           </span>
         )}
-      </p>
-
-      {/* 개발에서만 노출하면 좋아요 */}
+      </p> */}
+      개발에서만 노출하면 좋아요
       {process.env.NODE_ENV === "development" && (
         <button
           type="button"
@@ -114,7 +113,6 @@ export default function UserInfo({ onChange }: StepProps) {
           새 테스트 UUID 발급 (Dev)
         </button>
       )}
-
       <div className="space-y-4">
         <div>
           <label className="block text-sm mb-1">닉네임</label>
@@ -135,11 +133,17 @@ export default function UserInfo({ onChange }: StepProps) {
             onChange={(e) => setBusinessType(e.target.value)}
           >
             <option value="">선택하세요</option>
-            <option value="restaurant">음식점</option>
+            <option value="korean food">한식</option>
+            <option value="japanese food">일식</option>
+            <option value="western food">양식</option>
+            <option value="chinese food">중식</option>
+            <option value="dessert">디저트</option>
+            <option value="bakery">베이커리</option>
             <option value="cafe">카페</option>
-            <option value="retail">리테일</option>
-            <option value="creator">크리에이터/미디어</option>
-            <option value="other">기타</option>
+            <option value="fastfood">패스트푸드</option>
+            <option value="fusion">퓨전</option>
+            <option value="salad">채식</option>
+            <option value="bar">바</option>
           </select>
         </div>
 

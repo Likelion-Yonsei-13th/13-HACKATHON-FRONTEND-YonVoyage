@@ -72,12 +72,12 @@ export default function Step5({ value }: StepProps) {
         )}
       </div>
 
-      {resultUrl && (
+      {/* {resultUrl && (
         <div className="text-xs text-white/60">
           상태: {err ? "에러" : loaded ? "로드 완료" : "로드 중…"}{" "}
           {triedProxy && !err ? "(프록시 사용 중)" : ""}
         </div>
-      )}
+      )} */}
     </section>
   );
 }
