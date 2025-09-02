@@ -49,7 +49,7 @@ export default function PickGrid() {
             className="p-0 bg-transparent border-0 outline-none"
           >
             <img
-              src="/svg/button.png"
+              src="/svg/Button.png"
               alt="더보기"
               className="h-[50px] w-[115px] select-none pointer-events-none"
               loading="lazy"
