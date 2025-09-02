@@ -11,22 +11,23 @@ export default function HomePage() {
     <div>
       <TopBar />
 
-      <section className="mt-[20px] md:mt-[2å0px]">
+      <section>
         <HeroCarousel />
       </section>
 
-      <section className="mt-[120px] md:mt-[160px]">
+      <section className="mt-[80px] md:mt-[120px]">
         <PickGrid />
       </section>
 
-      <section className="mt-[120px] md:mt-[160px]">
+      <section className="mt-[80px] md:mt-[120px]">
         <SplitViewer />
       </section>
 
-      <section className="mt-[120px] md:mt-[160px]">
+      <section className="mt-[80px] md:mt-[120px]">
         <StartCta />
       </section>
-      <section className="mt-[120px] md:mt-[160px]">
+
+      <section className="mt-[80px] md:mt-[120px]">
         <UnderBar />
       </section>
     </div>
