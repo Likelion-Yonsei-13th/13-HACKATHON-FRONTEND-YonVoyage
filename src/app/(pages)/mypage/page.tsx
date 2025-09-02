@@ -1,8 +1,13 @@
+// src/app/(pages)/mypage/page.tsx
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import TopBar from "@/app/_common/components/top-bar";
 import UnderBar from "@/app/_common/components/under-bar";
 import ProfileHeader from "./components/ProfileHeader";
 import MyPlating from "./components/MyPlating";
 import FAQAccordion from "./components/FAQAccordion";
+import { checkUserByUuid } from "@/app/_common/apis/user";
 
 const faqItems = [
   {
@@ -19,17 +24,52 @@ const faqItems = [
   },
 ];
 
-export default function HomePage() {
+// 온보딩과 동일한 uuid 유틸
+function getUUID() {
+  if (typeof window === "undefined") return "";
+  const KEY = "aistudio_uuid";
+  let v = localStorage.getItem(KEY);
+  if (!v) {
+    v = crypto.randomUUID();
+    localStorage.setItem(KEY, v);
+  }
+  return v;
+}
+
+export default function MyPage() {
+  const [nickname, setNickname] = useState<string>("닉네임");
+  const [loading, setLoading] = useState(true);
+
+  const uuid = useMemo(() => getUUID(), []);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const ck = await checkUserByUuid(uuid);
+        if (!mounted) return;
+        const serverName = (ck.nickname ?? "").trim();
+        setNickname(serverName || "닉네임");
+      } catch (e) {
+        console.warn("[mypage] checkUserByUuid 실패:", e);
+        if (mounted) setNickname("닉네임");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [uuid]);
+
   return (
     <div className="min-h-screen flex flex-col">
       <TopBar />
-
       <main className="flex-1">
         <div className="mx-auto max-w-[1440px] px-4 md:px-6 lg:px-8">
-          {/*  여기서 간격만 조절 */}
           <div className="flex flex-col gap-[120px] md:gap-[160px]">
             <ProfileHeader
-              nickname="닉네임"
+              nickname={loading ? "로딩 중..." : nickname}
               avatarUrl="/svg/avatar.png"
               received={0}
               picked={10}

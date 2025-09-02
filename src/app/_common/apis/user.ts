@@ -1,7 +1,12 @@
 // src/app/_common/apis/user.ts
 // 브라우저는 내부 라우트만 호출(프록시 경유)
 
-export type CheckUserRes = { exists: boolean; uuid?: string };
+export type CheckUserRes = {
+  exists: boolean;
+  uuid?: string;
+  nickname?: string | null;
+  business_type?: string | null;
+};
 
 export type RegisterUserRes = {
   success: boolean;
@@ -22,9 +27,10 @@ export async function checkUserByUuid(uuid: string): Promise<CheckUserRes> {
   const payload = { uuid, user_uuid: uuid };
 
   const res = await fetch(url, {
-    method: "POST",
+    method: "POST", // ✅ 서버가 POST 기대
     headers: jsonHeaders(),
     body: JSON.stringify(payload),
+    cache: "no-store", // ✅ 항상 최신
   });
 
   if (!res.ok) {
@@ -36,10 +42,11 @@ export async function checkUserByUuid(uuid: string): Promise<CheckUserRes> {
   return {
     exists: !!(data.exists ?? data.is_exists ?? data.found ?? true),
     uuid: data.uuid ?? data.user_uuid ?? uuid,
+    nickname: data.nickname ?? data.name ?? null, // ✅ 서버 닉네임 전달
+    business_type: data.business_type ?? data.business ?? data.type ?? null, // ✅ 업종
   };
 }
 
-// src/app/_common/apis/user.ts
 export async function registerUser(
   nickname: string,
   business_type: string,
@@ -54,7 +61,7 @@ export async function registerUser(
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(),
     body: JSON.stringify(payload),
   });
 
@@ -62,7 +69,6 @@ export async function registerUser(
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     if (/already exists/i.test(text)) {
-      // 서버에 이미 존재하므로 곧바로 조회해 성공처럼 돌려줌
       const ck = await checkUserByUuid(uuid || "");
       return {
         success: true,
