@@ -2,7 +2,6 @@
 "use client";
 
 import type { StepProps } from "./types";
-import UserInfo from "./UserInfo";
 
 const OPTIONS = [
   "AI 초수",
@@ -11,46 +10,65 @@ const OPTIONS = [
 ];
 
 export default function Step1({ value, onChange }: StepProps) {
-  // (선택) value가 string[]일 수도 있으니 선택 여부 안전하게 계산
   const isSelected = (label: string) =>
     Array.isArray(value) ? value.includes(label) : value === label;
 
+  const handleClick = (label: string) => {
+    if (Array.isArray(value)) {
+      const set = new Set(value);
+      set.has(label) ? set.delete(label) : set.add(label);
+      onChange?.(Array.from(set));
+    } else {
+      onChange?.(label);
+    }
+  };
+
   return (
-    <section className="min-h-[60vh] flex flex-col items-center justify-center gap-8">
-      <h2 className="text-2xl font-bold text-white">시작하기</h2>
+    <section className="min-h-[60vh] w-full flex flex-col items-center justify-center gap-6 px-4">
+      {/* 타이틀 (Step2와 동일 톤) */}
+      <h2 className="text-white text-[15px] sm:text-xl font-bold text-center">
+        시작하기
+      </h2>
 
+      {/* 카드 컨테이너: 모바일 100% / 최대 454px */}
       <div
-        className="rounded-lg text-gray-200"
-        style={{
-          width: "454px",
-          minWidth: "280px",
-          borderRadius: "12px",
-          backgroundColor: "rgba(33, 34, 37, 1)",
-          padding: "32px",
-        }}
+        className="
+          mx-auto w-full max-w-[454px]
+          rounded-xl bg-[#212225]
+          p-5 sm:p-7
+          text-gray-200 shadow-[0_8px_16px_rgba(0,0,0,0.25)]
+        "
       >
-        <h3 className="text-base font-semibold text-white">나(사장님)은?</h3>
+        <h3 className="text-[13px] sm:text-base font-semibold text-white">
+          나(사장님)은?
+        </h3>
 
-        <ul className="space-y-4 mt-6">
+        <ul className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
           {OPTIONS.map((label) => {
             const selected = isSelected(label);
             return (
               <li
                 key={label}
-                onClick={() => onChange?.(label)}
+                onClick={() => handleClick(label)}
                 className={[
-                  "flex items-center gap-3 cursor-pointer transition",
-                  selected ? "text-white" : "text-gray-400",
+                  "flex items-center gap-3 cursor-pointer rounded-md px-3 py-3 sm:py-3.5 transition",
+                  selected
+                    ? "bg-white/5 text-white"
+                    : "text-gray-300 hover:text-white/90",
                 ].join(" ")}
               >
                 <span
-                  className={`text-lg ${
-                    selected ? "text-green-400" : "text-gray-500"
-                  }`}
+                  className={[
+                    "shrink-0",
+                    "text-base sm:text-lg",
+                    selected ? "text-emerald-400" : "text-gray-500",
+                  ].join(" ")}
                 >
                   ✓
                 </span>
-                <span>{label}</span>
+                <span className="text-[12px] sm:text-[12px] md:text-[10px]">
+                  {label}
+                </span>
               </li>
             );
           })}

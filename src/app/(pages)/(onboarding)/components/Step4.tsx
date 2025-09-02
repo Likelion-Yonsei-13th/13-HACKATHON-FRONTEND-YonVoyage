@@ -1,5 +1,6 @@
 // src/app/(pages)/onboarding/components/Step4.tsx
 "use client";
+
 import { useRef, useState, useEffect, useMemo } from "react";
 import type { StepProps } from "./types";
 import { uploadOnboardingImage } from "@/app/_common/apis/onboarding";
@@ -42,11 +43,9 @@ export default function Step4({ value, onChange }: StepProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const uuid = useMemo(() => getUUID(), []);
-
-  // ✅ onChange 안전 래퍼 (없으면 no-op)
   const emit = onChange ?? (() => {});
 
-  // blob URL 정리
+  // blob url 정리
   useEffect(() => {
     return () => {
       if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
@@ -60,37 +59,41 @@ export default function Step4({ value, onChange }: StepProps) {
     if (!f) return;
 
     try {
-      // 이전 미리보기 정리 후 새 URL 설정
+      // 이전 blob URL 정리
       if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
+
+      // 미리보기 먼저 표시
       const blobUrl = URL.createObjectURL(f);
       setFile(f);
       setPreviewUrl(blobUrl);
 
-      // AVIF → PNG 변환 시도
+      // AVIF → PNG 변환 (가능할 때만)
       if (f.type === "image/avif") {
         try {
           f = await avifToPng(f);
           console.log("[Step4] AVIF → PNG 변환 완료:", f.name, f.type);
         } catch (err) {
-          console.warn("[Step4] AVIF 변환 실패, 원본으로 업로드 시도:", err);
+          console.warn("[Step4] AVIF 변환 실패, 원본 업로드 시도:", err);
         }
       }
 
       setLoading(true);
-      const res = await uploadOnboardingImage(f, uuid); // ← uuid 전달
+
+      // 서버 업로드
+      const res = await uploadOnboardingImage(f, uuid);
       const uploadId = String(res.uploadId ?? "");
 
-      // ✅ 타입에 맞게 previewUrl 사용
+      // 서버가 돌려준 http(s) 미리보기 url
       const serverUrl =
         typeof res.previewUrl === "string" &&
         /^https?:\/\//i.test(res.previewUrl)
           ? res.previewUrl
           : undefined;
 
-      // 부모에 업로드 식별자 전달
+      // 부모에 업로드 id 전달
       emit(uploadId);
 
-      // 브리지 저장 (blob은 절대 저장하지 않음)
+      // 브리지 저장 (blob URL 저장 금지)
       const prev = JSON.parse(
         localStorage.getItem("aistudio_bridge_last") || "{}"
       );
@@ -112,39 +115,50 @@ export default function Step4({ value, onChange }: StepProps) {
   };
 
   return (
-    <section className="min-h-[60vh] flex flex-col items-center justify-center gap-8">
-      <h2 className="text-2xl font-bold text-white">내 음식사진 업로드</h2>
+    <section className="min-h-[60vh] w-full flex flex-col items-center justify-center gap-6 px-4">
+      {/* 타이틀 */}
+      <h2 className="text-white text-[15px] sm:text-xl font-bold text-center">
+        내 음식사진 업로드
+      </h2>
 
       <div
-        className="rounded-lg text-gray-200"
-        style={{
-          width: 454,
-          height: 356,
-          minWidth: 280,
-          borderRadius: 12,
-          backgroundColor: "rgba(33,34,37,1)",
-          padding: 32,
-        }}
+        className="
+          mx-auto w-full max-w-[454px]
+          rounded-xl bg-[#212225]
+          p-5 sm:p-7
+          text-gray-200 shadow-[0_8px_16px_rgba(0,0,0,0.25)]
+        "
       >
-        <div className="h-full w-full flex flex-col items-center justify-center gap-5">
-          <div
+        <div className="w-full flex flex-col items-center gap-5">
+          {/* 업로드 박스: 정사각, 반응형 최대 240px */}
+          <button
+            type="button"
             onClick={pickFile}
-            className="w-[220px] h-[220px] rounded-md bg-[#2B2C2F] hover:bg-[#303135] cursor-pointer flex items-center justify-center overflow-hidden transition"
+            disabled={loading}
+            className="
+              relative block w-full max-w-[240px] aspect-square
+              rounded-md bg-[#2B2C2F] hover:bg-[#303135]
+              overflow-hidden transition ring-1 ring-white/10
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500
+              disabled:opacity-60
+            "
             title="이미지 선택"
+            aria-label="이미지 업로드"
           >
-            {file && previewUrl ? (
+            {previewUrl ? (
               <img
                 src={previewUrl}
                 alt="선택된 이미지 미리보기"
                 className="h-full w-full object-cover"
               />
             ) : (
-              <span className="text-sm text-gray-400">
+              <span className="absolute inset-0 grid place-items-center text-[12px] sm:text-sm text-gray-400">
                 클릭해서 이미지를 업로드 해주세요.
               </span>
             )}
-          </div>
+          </button>
 
+          {/* 실제 파일 입력 */}
           <input
             ref={inputRef}
             type="file"
@@ -153,7 +167,8 @@ export default function Step4({ value, onChange }: StepProps) {
             onChange={handleFileChange}
             disabled={loading}
           />
-          {loading && <div className="text-sm text-white/60">업로드 중…</div>}
+
+          {loading && <div className="text-sm text-white/70">업로드 중…</div>}
         </div>
       </div>
     </section>
