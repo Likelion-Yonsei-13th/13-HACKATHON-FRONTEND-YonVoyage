@@ -41,7 +41,7 @@ export default function PickGrid() {
         {/* 헤더 */}
         <div className="mb-8 flex items-center justify-between">
           <h2 className="text-white text-[22px] font-semibold">픽플골라보기</h2>
-          \
+
           <button
             type="button"
             onClick={() => router.push("/gallery")}
