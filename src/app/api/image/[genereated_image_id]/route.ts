@@ -2,10 +2,10 @@
 export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 
-type Params = { params: { generated_image_id: string } };
+type Params = { params: Promise<{ generated_image_id: string }> };
 
 export async function GET(_: Request, { params }: Params) {
-  const { generated_image_id } = params;
+  const { generated_image_id } = await params;
 
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE}/api/image/${generated_image_id}`,

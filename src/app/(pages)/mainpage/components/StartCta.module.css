@@ -6,12 +6,12 @@
 /* 문장 스타일(크기/두께) */
 .cta-text {
   color: rgba(255, 255, 255, 0.92);
-  font-weight: 600; /* 굵게 */
+  font-weight: 601; /* 굵게 */
   font-size: var(--cta-text, 18px); /* 기본 18px */
   line-height: 1.45;
 }
 
-/* 버튼 모양/사이즈 */
+/* 버튼 모양/사이즈ㅇㅇㅇㅇㅇ */
 .cta-start-btn {
   display: inline-flex !important;
   align-items: center !important;

@@ -17,14 +17,13 @@ export default function HeroSlide({ bg, circle, title, desc }: Props) {
         className="absolute inset-0 h-full w-full object-cover"
       />
       {/* 어둡게 + 좌->우 그라데이션 */}
-      <div className="absolute inset-0 bg-black/55" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
+      <div className="absolute inset-0 bg-black/25" />
 
       {/* ---- 텍스트 (왼쪽 140px 근처) ---- */}
       <div
         className="
         absolute top-1/2 -translate-y-1/2
-        left-[350px] md:left-[120px] lg:left-[140px]
+        left-[350px] md:left-[120px] lg:left-[200px]
         w-full max-w-[600px]
       "
       >

@@ -9,21 +9,21 @@ type Slide = { bg: string; circle: string; title: string; desc?: string };
 const slides: Slide[] = [
   {
     bg: "/svg/hero-bg1.png",
-    circle: "/svg/hero-circle.png",
+    circle: "/svg/hero-circle1.png",
     title: "플레이팅의 즐거움!",
-    desc: "음식을 작품처럼 생각하는 당신을 픽플은 이해합니다. 플레이팅을\n 고르는 공간, 플레이팅하는 사람들이 모인 이곳에서 몰입의 즐거움을\n 경험하세요!",
+    desc: "음식을 작품처럼 생각하는 당신을 픽플은 이해합니다. \n플레이팅을 고르는 공간, 플레이팅하는 사람들이 모인 이곳에서 몰입의\n 즐거움을 경험하세요!",
   },
   {
-    bg: "/svg/hero-bg1.png",
-    circle: "/svg/hero-circle.png",
-    title: "Healthy an\n Refreshing Salads",
-    desc: "Nourish your body with our selection of crisp and refreshing\n salads. Packed with nutritious ingredients, these salads are\n a perfect blend of taste and wellness",
+    bg: "/svg/hero-bg2.png",
+    circle: "/svg/hero-circle2.png",
+    title: "픽플둘러보기",
+    desc: "픽플들이 공유한 최신 AI 플레이팅 사진을 한눈에! 최신순·업종순·나의\n 픽순으로 편리하게 볼 수 있어요. 또한 나의픽에서 유저들의 실제 \nAI프롬프트에 사용한 핵심 태그도 픽하고 활용하세요!",
   },
   {
-    bg: "/svg/hero-bg1.png",
-    circle: "/svg/hero-circle.png",
-    title: "Irresistible fried\n rice",
-    desc: "Experience fried chicken like never before. Our secret recipe\n ensures a crispy exterior and tender, juicy meat that will\n leave you craving more.",
+    bg: "/svg/hero-bg3.png",
+    circle: "/svg/hero-circle3.png",
+    title: "AI스튜디오",
+    desc: "픽플에서 예시 프롬프트로 누구나 쉽게 내 음식 사진 제작가능해요.\n전후 사진으로 비교도 훨씬 빠르게. 가게 플레이팅을 바꾸고 싶을때\n시행착오없이 효율적으로 이용하세요!",
   },
 ];
 const Arrow = ({ dir }: { dir: "left" | "right" }) => (
