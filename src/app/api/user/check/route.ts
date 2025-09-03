@@ -22,17 +22,15 @@ export async function POST(req: Request) {
     console.log("[user/check] client payload:", raw);
 
     const idAny = raw.uploaded_image_id ?? raw.uploaded_image ?? raw.id;
-
-    // 숫자/문자열 동시 호환
     const idNum =
       typeof idAny === "string" && /^\d+$/.test(idAny) ? Number(idAny) : idAny;
     const idStr = String(idAny ?? "");
 
-    // 업스트림 바디: 두 키 모두 포함 (서버별 파서 호환)
+    // 업스트림 바디 (서버별 파서 호환)
     const payload: Record<string, any> = {
       uploaded_image_id: idNum ?? idStr,
-      uploaded_image: idNum ?? idStr, // ✅ 함께 전달
-      uuid: raw.uuid ?? raw.user_uuid ?? raw.user,
+      uploaded_image: idNum ?? idStr,
+      uuid: raw.uuid, // ✅ 필요한 키만 전달
       prompt: raw.prompt,
       options: raw.options,
     };
