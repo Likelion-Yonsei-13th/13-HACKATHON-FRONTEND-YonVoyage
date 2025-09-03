@@ -8,20 +8,18 @@ const UPSTREAM_BASE =
   process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ||
   "https://pixpl.com";
 
-export async function POST(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+// ⚠️ 두 번째 인자 타입 주석 삭제(중요)
+export async function POST(_req: Request, ctx: any) {
   try {
-    const id = encodeURIComponent(params.id);
+    const id = encodeURIComponent(String(ctx?.params?.id ?? ""));
 
-    // ✅ 백엔드 명세대로 중계: POST /api/studio/{id}/save
+    // ✅ 백엔드 실제 명세로 중계: POST /api/studio/{generated_image_id}/save
     let upstream = await fetch(`${UPSTREAM_BASE}/api/studio/${id}/save`, {
       method: "POST",
       cache: "no-store",
     });
 
-    // (선택) 어떤 서버는 트레일링 슬래시를 요구할 수 있어 폴백 한 번 시도
+    // 서버에 따라 트레일링 슬래시 필요할 수도 있어 폴백 1회
     if (!upstream.ok && upstream.status === 404) {
       upstream = await fetch(`${UPSTREAM_BASE}/api/studio/${id}/save/`, {
         method: "POST",
