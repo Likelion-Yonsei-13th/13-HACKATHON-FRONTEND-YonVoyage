@@ -1,8 +1,19 @@
 // src/app/_common/apis/onboarding.ts
 
 export type UploadRes = { uploadId: string; previewUrl?: string };
-export type GenerateRes = { generated_image_id: string };
-export type GetRes = { url: string };
+export type GenerateRes = {
+  generated_image_id: string;
+  generated_image_url?: string; // GET으로 받은 최종 이미지 URL
+};
+export type GeneratedDetail = {
+  id: number | string;
+  uuid: string | null;
+  uploaded_image: number | string;
+  prompt: string | null;
+  generated_image: string;
+  generated_at: string;
+};
+export type GetRes = GeneratedDetail & { url: string };
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || "").replace(/\/$/, "");
 
@@ -18,17 +29,28 @@ async function okOrThrow(resOrPromise: Response | Promise<Response>) {
   return res;
 }
 
-/** 업로드: 반드시 uuid와 함께 전송 */
-export async function uploadOnboardingImage(
-  file: File,
-  uuid: string
-): Promise<UploadRes> {
-  const fd = new FormData();
-  fd.append("image", file, file.name); // 서버 기본 필드명
-  fd.append("uuid", uuid); // 소유자 매핑
-  fd.append("user_uuid", uuid); // 호환용 키
+/** 상대경로면 절대경로로 보정 */
+function absolutizeUrl(u: string) {
+  if (typeof u !== "string") return u as any;
+  if (/^https?:\/\//i.test(u)) return u;
+  if (API_BASE) {
+    return `${API_BASE}${u.startsWith("/") ? "" : "/"}${u}`;
+  }
+  console.warn(
+    "[absolutizeUrl] 상대경로 수신, NEXT_PUBLIC_API_BASE 미설정:",
+    u
+  );
+  return u;
+}
 
-  const url = "/api/studio/upload/";
+// src/app/_common/apis/onboarding.ts
+export async function uploadOnboardingImage(file: File, uuid?: string) {
+  const fd = new FormData();
+  fd.append("image", file, file.name);
+  // ✅ 명세 준수: uuid가 있을 때만 추가
+  if (uuid && uuid.trim()) fd.append("uuid", uuid.trim());
+
+  const url = "/api/studio/upload/"; // 내부 라우트(프록시)는 그대로 사용
   console.log(
     "[UPLOAD] →",
     url,
@@ -36,11 +58,13 @@ export async function uploadOnboardingImage(
     file.name,
     file.size,
     file.type,
-    "uuid:",
-    uuid
+    "uuid?:",
+    !!uuid
   );
 
-  const res = await okOrThrow(fetch(url, { method: "POST", body: fd }));
+  const res = await okOrThrow(
+    fetch(url, { method: "POST", body: fd, credentials: "include" })
+  );
   const raw: any = await res.json().catch(() => ({}));
   console.log("[UPLOAD] ← body:", raw);
 
@@ -53,69 +77,146 @@ export async function uploadOnboardingImage(
   return { uploadId: String(uploadId), previewUrl };
 }
 
-/** 업로드ID로 생성(보정) 시작 → 생성ID 반환 */
+/**
+ * 생성(보정) 트리거 (명세 반영)
+ * 1) POST /api/user/check/  (uuid/prompt/options 전달)
+ * 2) POST /api/studio/generate/  → id 획득
+ * 3) GET  /api/studio/{id}/      → generated_image 최종 URL 확보
+ *
+ * 사용 예:
+ *  - 온보딩: generateOnboardingImage(uploadId, { options: ["basic","composition"] })
+ *  - 로그인: generateOnboardingImage(uploadId, { uuid, prompt })
+ *  - 하위호환: generateOnboardingImage(uploadId, uuidString)
+ */
+
+// ... (윗부분 동일)
+
 export async function generateOnboardingImage(
   uploadId: string,
-  uuid?: string
+  params?: { uuid?: string; prompt?: string; options?: string[] } | string
 ): Promise<GenerateRes> {
-  const url = "/api/studio/generate/";
-  const payload: Record<string, any> = { uploaded_image_id: uploadId };
-  if (uuid) {
-    payload.uuid = uuid;
-    payload.user_uuid = uuid;
+  // ── 파라미터 정리
+  const uuid = typeof params === "string" ? params : params?.uuid;
+  const prompt = typeof params === "string" ? undefined : params?.prompt;
+  const optionsParam = typeof params === "string" ? undefined : params?.options;
+
+  // 숫자/문자열 모두 준비
+  const imgIdNum = /^\d+$/.test(String(uploadId))
+    ? Number(uploadId)
+    : undefined;
+  const imgIdStr = String(uploadId);
+
+  // ── (1) 유저 체크: 두 키 모두 전송 (서버 호환)
+  const checkPayload: Record<string, any> = {
+    uploaded_image_id: imgIdNum ?? imgIdStr,
+    uploaded_image: imgIdNum ?? imgIdStr, // ✅ 추가: 호환 키
+  };
+  if (uuid) checkPayload.uuid = uuid;
+  if (prompt) checkPayload.prompt = prompt;
+
+  if (!uuid) {
+    // 온보딩(비로그인): options 필수 → 없으면 기본값
+    checkPayload.options =
+      Array.isArray(optionsParam) && optionsParam.length
+        ? optionsParam
+        : ["basic", "composition"];
+  } else if (Array.isArray(optionsParam) && optionsParam.length) {
+    // 로그인도 옵션 전달 가능
+    checkPayload.options = optionsParam;
   }
 
-  console.log("[GENERATE] →", url, "payload:", payload);
+  console.log("[GENERATE] step1: /api/user/check/ →", checkPayload);
 
-  const res = await okOrThrow(
-    fetch(url, {
+  await okOrThrow(
+    fetch("/api/user/check/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      credentials: "include",
+      body: JSON.stringify(checkPayload),
+    })
+  )
+    .then((r) => r.json().catch(() => ({})))
+    .then((j) => console.log("[GENERATE] step1 ←", j));
+
+  // ── (2) 실제 생성 트리거: /api/studio/generate/
+  // ── (2) 실제 생성 트리거: /api/studio/generate/
+  const genIdNum = /^\d+$/.test(String(uploadId))
+    ? Number(uploadId)
+    : undefined;
+
+  // ✅ uuid 있는 유저는 prompt도 함께 전달해야 함
+  const genPayload: Record<string, any> = {
+    uploaded_image_id: genIdNum ?? String(uploadId),
+    uploaded_image: genIdNum ?? String(uploadId),
+    // ⬇️ 추가
+    ...(prompt ? { prompt } : {}),
+  };
+
+  if (uuid) {
+    genPayload.uuid = uuid;
+    genPayload.user = uuid;
+    genPayload.user_uuid = uuid;
+  }
+
+  console.log("[GENERATE] step2: /api/studio/generate/ →", genPayload);
+
+  const genRes = await okOrThrow(
+    fetch("/api/studio/generate/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(genPayload),
     })
   );
-  const raw: any = await res.json().catch(() => ({}));
-  console.log("[GENERATE] ← body:", raw);
+
+  const genRaw: any = await genRes.json().catch(() => ({}));
+  console.log("[GENERATE] step2 ←", genRaw);
 
   const generated_image_id =
-    raw.generated_image_id ?? raw.generatedId ?? raw.id;
-  if (!generated_image_id) throw new Error("응답에 generated_image_id 없음");
+    genRaw.generated_image_id ?? genRaw.generatedId ?? genRaw.id;
+  if (!generated_image_id) {
+    throw new Error("응답에 generated_image_id(id) 없음");
+  }
 
-  return { generated_image_id: String(generated_image_id) };
+  // ── (3) GET /api/studio/{id}
+  const detail = await getGeneratedImage(String(generated_image_id));
+  return {
+    generated_image_id: String(generated_image_id),
+    generated_image_url: detail.url,
+  };
 }
 
-/** 생성ID로 최종 이미지 조회 */
+/** 생성ID로 최종 이미지 조회 (명세 반영) */
 export async function getGeneratedImage(generatedId: string): Promise<GetRes> {
+  // 주의: DRF 환경은 보통 트레일링 슬래시 필요 → `/.../${id}/`
+  // 명세가 `/api/studio/{id}` 형태여도 서버 설정에 따라 `/` 필요할 수 있음.
   const url = `/api/studio/${encodeURIComponent(generatedId)}/`;
   console.log("[GET] →", url);
 
-  const res = await okOrThrow(fetch(url, { method: "GET" }));
+  const res = await okOrThrow(
+    fetch(url, { method: "GET", credentials: "include" })
+  );
   const raw: any = await res.json().catch(() => ({}));
   console.log("[GET] ← body:", raw);
 
-  let urlFromServer: string | undefined =
-    raw.url ??
-    raw.image_url ??
-    raw.resultUrl ??
-    raw.previewUrl ??
-    raw.generated_image;
+  // 명세 예시:
+  // {
+  //   "id": 5,
+  //   "uuid": null,
+  //   "uploaded_image": 3,
+  //   "prompt": null,
+  //   "generated_image": "http://.../media/generated_images/example.png",
+  //   "generated_at": "2025-08-24T02:45:00Z"
+  // }
+  const detail: GeneratedDetail = {
+    id: raw.id,
+    uuid: raw.uuid ?? null,
+    uploaded_image: raw.uploaded_image,
+    prompt: raw.prompt ?? null,
+    generated_image: absolutizeUrl(raw.generated_image ?? raw.url),
+    generated_at: raw.generated_at,
+  };
 
-  if (!urlFromServer) throw new Error("응답에 url 없음");
-
-  // 상대경로면 절대경로로 보정
-  const isAbsolute = /^https?:\/\//i.test(urlFromServer);
-  if (!isAbsolute) {
-    if (API_BASE) {
-      urlFromServer = `${API_BASE}${
-        urlFromServer.startsWith("/") ? "" : "/"
-      }${urlFromServer}`;
-    } else {
-      console.warn(
-        "[GET] 상대경로 수신, NEXT_PUBLIC_API_BASE 미설정:",
-        urlFromServer
-      );
-    }
-  }
-
-  return { url: urlFromServer };
+  // 편의 필드: url
+  return { ...detail, url: detail.generated_image };
 }
