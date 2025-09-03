@@ -1,9 +1,6 @@
+// src/app/api/aistudio/[id]/route.ts
 export const runtime = "nodejs";
-
-import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-
-type RouteCtx = { params: { id: string } };
 
 const UPSTREAM_BASE =
   process.env.PIXPL_BASE?.replace(/\/$/, "") ||
@@ -18,8 +15,11 @@ function absolutize(u?: string) {
   return `${MEDIA_BASE}${u.startsWith("/") ? "" : "/"}${u}`;
 }
 
-export async function GET(_req: NextRequest, ctx: RouteCtx) {
-  const { id } = ctx.params; // ✅ Next가 기대하는 컨텍스트 타입
+export async function GET(_req: Request, context: any) {
+  const id = String(context?.params?.id ?? "");
+  if (!id) {
+    return NextResponse.json({ error: "missing id" }, { status: 400 });
+  }
 
   try {
     const upstream = await fetch(
@@ -34,28 +34,16 @@ export async function GET(_req: NextRequest, ctx: RouteCtx) {
       });
     }
 
-    // 응답 타입을 안전하게 파싱
-    let data: unknown = {};
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch {
-      data = {};
-    }
-
-    // 생성 결과 스펙: { id, uuid, uploaded_image, prompt, generated_image, generated_at }
-    if (
-      data &&
-      typeof data === "object" &&
-      "generated_image" in data &&
-      typeof (data as any).generated_image === "string"
-    ) {
-      const media = (data as any).generated_image as string;
-      (data as any).url = absolutize(media); // url 필드 보강
-    }
+    let data: any = text ? JSON.parse(text) : {};
+    const media =
+      data?.url ?? data?.generated_image ?? data?.image_url ?? data?.path;
+    if (typeof media === "string") data.url = absolutize(media);
 
     return NextResponse.json(data, { status: upstream.status });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: msg }, { status: 500 });
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e?.message || String(e) },
+      { status: 500 }
+    );
   }
 }
