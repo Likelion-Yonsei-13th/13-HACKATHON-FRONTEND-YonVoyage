@@ -1,10 +1,12 @@
 // src/app/_common/apis/onboarding.ts
 
 export type UploadRes = { uploadId: string; previewUrl?: string };
+
 export type GenerateRes = {
   generated_image_id: string;
   generated_image_url?: string; // GET으로 받은 최종 이미지 URL
 };
+
 export type GeneratedDetail = {
   id: number | string;
   uuid: string | null;
@@ -13,6 +15,7 @@ export type GeneratedDetail = {
   generated_image: string;
   generated_at: string;
 };
+
 export type GetRes = GeneratedDetail & { url: string };
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || "").replace(/\/$/, "");
@@ -49,7 +52,7 @@ export async function uploadOnboardingImage(file: File, uuid?: string) {
   fd.append("image", file, file.name);
   if (uuid && uuid.trim()) fd.append("uuid", uuid.trim());
 
-  const url = "/api/studio/upload/"; // 내부 프록시 라우트
+  const url = "/api/studio/upload/";
   console.log("[UPLOAD] →", url, "file:", file.name, file.size, file.type);
 
   const res = await okOrThrow(
@@ -67,9 +70,7 @@ export async function uploadOnboardingImage(file: File, uuid?: string) {
   return { uploadId: String(uploadId), previewUrl };
 }
 
-/**
- * 생성(보정) 트리거 (명세 반영)
- */
+/** 생성(보정) 트리거 */
 export async function generateOnboardingImage(
   uploadId: string,
   params?: { uuid?: string; prompt?: string; options?: string[] } | string
@@ -119,9 +120,7 @@ export async function generateOnboardingImage(
     ...(prompt ? { prompt } : {}),
   };
   if (uuid) {
-    genPayload.uuid = uuid;
-    genPayload.user = uuid;
-    genPayload.user_uuid = uuid;
+    genPayload.uuid = uuid; // ✅ 이것만 보냄
   }
 
   console.log("[GENERATE] step2 /api/studio/generate →", genPayload);

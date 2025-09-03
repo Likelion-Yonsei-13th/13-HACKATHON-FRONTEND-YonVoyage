@@ -30,7 +30,9 @@ export default function UserInfo({ onChange }: StepProps) {
         const r = await checkUserByUuid(localUuid);
         if (cancelled) return;
         setExists(r.exists);
+
         if (r.uuid && r.uuid !== localUuid) setUUID(r.uuid);
+
         if (r.exists && !sentUpRef.current) {
           sentUpRef.current = true;
           onChange?.(r.uuid ?? localUuid);
@@ -54,56 +56,54 @@ export default function UserInfo({ onChange }: StepProps) {
 
     setLoading(true);
     try {
-      const res = await registerUser(
-        nickname.trim(),
-        businessType.trim(),
-        localUuid
-      );
+      if (exists === true) {
+        if (!sentUpRef.current) {
+          sentUpRef.current = true;
+          onChange?.(localUuid);
+        }
+        alert("이미 등록된 사용자입니다.");
+        return;
+      }
 
-      setUUID(res.uuid);
+      const reg = await registerUser({
+        uuid: localUuid,
+        nickname: nickname.trim(),
+        business_type: businessType.trim(), // ✅ 영어 value 그대로 전송
+        is_profile_public: true,
+      });
+
+      setUUID(reg.uuid);
       localStorage.setItem(
         "aistudio_user",
         JSON.stringify({
-          uuid: res.uuid,
-          nickname: res.nickname,
-          business_type: res.business_type,
-          created_at: res.created_at,
+          uuid: reg.uuid,
+          nickname: reg.nickname,
+          business_type: reg.business_type,
+          created_at: reg.created_at,
         })
       );
 
       if (!sentUpRef.current) {
         sentUpRef.current = true;
-        onChange?.(res.uuid);
+        onChange?.(reg.uuid);
       }
       alert("등록이 완료되었습니다.");
     } catch (e: any) {
       console.error("[UserInfo] register error:", e);
-      alert("등록에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      alert(e?.message || "등록에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
       setLoading(false);
     }
   }
 
-  /** 개발 모드: 새 테스트 UUID 발급 */
   function handleNewUuid() {
     const v = forceNewUUID();
     alert(`새 테스트 UUID가 발급되었습니다.\n${v}\n다시 등록해 주세요.`);
-    // 화면만 새로고침(선택)
     location.reload();
   }
 
   return (
     <section className="w-full max-w-[560px] mx-auto">
-      {/* <h2 className="text-2xl font-semibold mb-4">사용자 등록</h2>
-      <p className="text-sm text-neutral-400 mb-6">
-        로컬 UUID: <span className="font-mono break-all">{localUuid}</span>
-        {exists === true && (
-          <span className="ml-2 text-emerald-500">
-            이미 등록된 사용자입니다.
-          </span>
-        )}
-      </p> */}
-
       {process.env.NODE_ENV === "development" && (
         <button
           type="button"
@@ -113,6 +113,7 @@ export default function UserInfo({ onChange }: StepProps) {
           새 테스트 UUID 발급 (Dev)
         </button>
       )}
+
       <div className="space-y-4">
         <div>
           <label className="block text-sm mb-1">닉네임</label>
@@ -133,6 +134,7 @@ export default function UserInfo({ onChange }: StepProps) {
             onChange={(e) => setBusinessType(e.target.value)}
           >
             <option value="">선택하세요</option>
+            {/* ✅ value는 영어, 라벨은 한글 */}
             <option value="korean food">한식</option>
             <option value="japanese food">일식</option>
             <option value="western food">양식</option>
