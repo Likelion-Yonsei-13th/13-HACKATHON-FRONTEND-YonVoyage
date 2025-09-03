@@ -10,16 +10,18 @@ import {
 } from "@/app/_common/apis/onboarding";
 import { getOrCreateUUID } from "@/app/_common/utils/uuid";
 
+// ⬇️ FourSquare 임포트 추가
+import { FourSquare } from "react-loading-indicators";
+
 export default function Step4({ value, onChange }: StepProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  // 로컬 임시 uuid (온보딩 트래킹용; 서버에 등록된 uuid와는 별개)
+  const [loadingText, setLoadingText] = useState<string>("");
   const localUuid = useMemo(() => getOrCreateUUID(), []);
   const emit = onChange ?? (() => {});
 
-  // blob url 정리
   useEffect(() => {
     return () => {
       if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
@@ -60,20 +62,17 @@ export default function Step4({ value, onChange }: StepProps) {
       setFile(f);
       setPreviewUrl(blobUrl);
 
-      // AVIF → PNG 변환
       if (f.type === "image/avif") {
         try {
           f = await avifToPng(f);
-          console.log("[Step4] AVIF → PNG 변환 완료:", f.name, f.type);
         } catch (err) {
           console.warn("[Step4] AVIF 변환 실패, 원본 업로드 시도:", err);
         }
       }
 
       setLoading(true);
+      setLoadingText("이미지 업로드 중…");
 
-      // 로그인 여부 판별: 서버에 "등록된" uuid가 있는지 확인
-      // aistudio_user 예: { uuid: "server-uuid", nickname: "...", ... }
       const storedUser =
         JSON.parse(localStorage.getItem("aistudio_user") || "null") || {};
       const serverUuid =
@@ -82,39 +81,20 @@ export default function Step4({ value, onChange }: StepProps) {
           ? storedUser.uuid.trim()
           : undefined;
 
-      // 업로드 (명세상: 온보딩은 uuid 미전송, 로그인은 uuid 전송)
-      console.log(
-        "[Step4] upload start localUuid:",
-        localUuid,
-        "serverUuid?:",
-        serverUuid,
-        "file:",
-        f.name,
-        f.type,
-        f.size
-      );
       const up = await uploadOnboardingImage(f, serverUuid);
       const uploadId = String(up.uploadId ?? "");
       const serverUrl =
         typeof up.previewUrl === "string" && /^https?:\/\//i.test(up.previewUrl)
           ? up.previewUrl
           : undefined;
-      console.log(
-        "[Step4] upload done → uploadId:",
-        uploadId,
-        "previewUrl:",
-        up.previewUrl
-      );
 
-      // 브리지 저장(업로드 결과)
       const prev = JSON.parse(
         localStorage.getItem("aistudio_bridge_last") || "{}"
       );
       const bridgeAfterUpload = {
         ...prev,
-        // 로컬 추적용 uuid도 남겨두되, 서버 uuid는 별도로 보관
         uuid: localUuid,
-        serverUuid, // ✅ 서버에 등록된 uuid만 별도로 저장
+        serverUuid,
         uploadedId: uploadId,
         uploadedUrl: serverUrl || undefined,
         ts: Date.now(),
@@ -124,19 +104,15 @@ export default function Step4({ value, onChange }: StepProps) {
         JSON.stringify(bridgeAfterUpload)
       );
 
-      // Step3에서 저장된 options(슬러그) 가져오기 (예: ["basic","composition"])
       const optionsFromBridge = Array.isArray(prev?.options)
         ? prev.options
-        : ["basic", "composition"]; // 기본값
-      console.log("[Step4] generate with options:", optionsFromBridge);
+        : ["basic", "composition"];
 
-      // prompt 결정: 브리지에 있으면 우선 사용
       let prompt: string | undefined =
         typeof prev?.prompt === "string" && prev.prompt.trim().length > 0
           ? prev.prompt.trim()
           : undefined;
 
-      // 서버 uuid가 있고(prompt 필수 정책), prompt가 없다면 옵션 기반 기본 프롬프트 생성
       if (serverUuid && !prompt) {
         const o = new Set(optionsFromBridge);
         const chunks: string[] = [];
@@ -151,32 +127,27 @@ export default function Step4({ value, onChange }: StepProps) {
             : "자연스럽고 맛있어 보이게 보정해줘.";
       }
 
-      // 이미지 생성 요청
-      // - 온보딩: uuid(undefined) → 서버 정책상 prompt 불필수
-      // - 로그인: uuid(serverUuid) → 서버 정책상 prompt 필수(위에서 생성/사용)
+      setLoadingText("이미지 생성 중…");
       const gen = await generateOnboardingImage(uploadId, {
-        uuid: serverUuid, // ✅ 서버 등록 uuid만 전송
+        uuid: serverUuid,
         options: optionsFromBridge,
-        prompt, // 로그인인 경우 필수, 온보딩이면 있어도 무방
+        prompt,
       });
-      console.log("[Step4] generate response:", gen);
 
-      // URL 확보: 응답에 URL이 없으면 조회 폴백
+      setLoadingText("결과 확인 중…");
       let finalUrl = gen.generated_image_url;
       if (!finalUrl && gen.generated_image_id) {
         try {
           const g = await getGeneratedImage(gen.generated_image_id);
           finalUrl = g.url;
-          console.log("[Step4] fetched generated url:", finalUrl);
         } catch (err) {
           console.warn("[Step4] getGeneratedImage 실패:", err);
         }
       }
 
-      // 브리지 저장(생성 결과) + 부모에 전달(다음 스텝에서 바로 표시)
       const bridgeAfterGenerate = {
         ...bridgeAfterUpload,
-        prompt, // 프롬프트도 같이 저장
+        prompt,
         generatedId: gen.generated_image_id,
         url: finalUrl || bridgeAfterUpload.uploadedUrl || "",
         ts: Date.now(),
@@ -186,13 +157,13 @@ export default function Step4({ value, onChange }: StepProps) {
         JSON.stringify(bridgeAfterGenerate)
       );
 
-      // Step5에서 이미지 표시용 value로 URL 넘김
       emit(bridgeAfterGenerate.url);
     } catch (err) {
       console.error("[Step4] 업로드/생성 에러:", err);
       alert("업로드 또는 생성에 실패했습니다. 다시 시도해 주세요.");
     } finally {
       setLoading(false);
+      setLoadingText("");
     }
   };
 
@@ -235,6 +206,19 @@ export default function Step4({ value, onChange }: StepProps) {
           />
         </div>
       </div>
+
+      {/* 로딩 인디케이터 */}
+      {loading && (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-black/50 z-50">
+          <FourSquare
+            color="rgba(0,223,90,1)"
+            size="medium"
+            text=""
+            textColor=""
+          />
+          <p className="mt-2 text-sm text-gray-300">{loadingText}</p>
+        </div>
+      )}
     </section>
   );
 }
