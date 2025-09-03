@@ -11,7 +11,8 @@ const UPSTREAM_BASE =
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    // 서버 스펙: nickname, business_type
+
+    // ✅ 명확히 /api/user/ 로만 프록시
     const upstream = await fetch(`${UPSTREAM_BASE}/api/user/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -24,10 +25,17 @@ export async function POST(req: Request) {
         status: upstream.status,
       });
     }
-    const data = text ? JSON.parse(text) : {};
-    // 그대로 전달(클라에서 타입 매핑 완료)
+
+    let data: any = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { raw: text };
+    }
+
     return NextResponse.json(data, { status: upstream.status });
   } catch (e: any) {
+    console.error("[api/user] proxy error:", e);
     return NextResponse.json(
       { error: `proxy error: ${e?.message || e}` },
       { status: 500 }

@@ -185,11 +185,20 @@ export async function listGeneratedLimited(uuid?: string, cap = HISTORY_CAP) {
   return normalizeGenerated(raw, cap);
 }
 
-export async function saveGenerated(generatedId: string) {
-  const res = await fetch(
-    `/api/aistudio/${encodeURIComponent(generatedId)}/save`,
-    { method: "POST" }
-  );
-  await okOrThrow(res, "save failed");
-  return await res.json();
+export async function saveGenerated(generatedId: string | number) {
+  const id = encodeURIComponent(String(generatedId));
+  const res = await fetch(`/api/aistudio/${id}/save`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`save failed (${res.status}): ${text}`);
+  }
+  try {
+    return await res.json();
+  } catch {
+    return { ok: true };
+  }
 }
