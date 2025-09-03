@@ -1,5 +1,4 @@
 // src/app/_common/apis/user.ts
-// 브라우저는 내부 라우트만 호출(프록시 경유)
 
 export type CheckUserRes = {
   exists: boolean;
@@ -20,55 +19,75 @@ function jsonHeaders() {
   return { "Content-Type": "application/json" };
 }
 
-/** 기존 유저 확인: uuid가 있어야 호출 가능 */
-export async function checkUserByUuid(uuid: string): Promise<CheckUserRes> {
-  const url = `/api/user/check`;
-  // 서버가 어떤 키를 기대할지 몰라 둘 다 보냄
-  const payload = { uuid, user_uuid: uuid };
+const base = process.env.NEXT_PUBLIC_API_BASE!;
+const withBase = (p: string) => `${base}${p}`;
 
-  const res = await fetch(url, {
-    method: "POST", // ✅ 서버가 POST 기대
+// 공용 fetcher + 로그
+async function apiFetch<T>(path: string, init: RequestInit): Promise<T> {
+  const url = withBase(path);
+  console.log("[API 요청]", init.method ?? "GET", url, init.body ?? "");
+  const res = await fetch(url, init);
+  const text = await res.text().catch(() => "");
+  console.log("[API 응답]", res.status, url, text.slice(0, 300));
+  if (!res.ok) throw new Error(`API Error (${res.status}): ${text}`);
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    // 응답이 JSON이 아닐 때 대비
+    return {} as T;
+  }
+}
+
+/** 기존 유저 확인 */
+export async function checkUserByUuid(uuid: string): Promise<CheckUserRes> {
+  const payload = { uuid, user_uuid: uuid };
+  // ✅ DRF 대비: 트레일링 슬래시 추가
+  const data = await apiFetch<any>("/api/user/check/", {
+    method: "POST",
     headers: jsonHeaders(),
     body: JSON.stringify(payload),
-    cache: "no-store", // ✅ 항상 최신
+    cache: "no-store",
   });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`check failed (${res.status}): ${text}`);
-  }
-
-  const data = (await res.json()) as any;
   return {
     exists: !!(data.exists ?? data.is_exists ?? data.found ?? true),
     uuid: data.uuid ?? data.user_uuid ?? uuid,
-    nickname: data.nickname ?? data.name ?? null, // ✅ 서버 닉네임 전달
-    business_type: data.business_type ?? data.business ?? data.type ?? null, // ✅ 업종
+    nickname: data.nickname ?? data.name ?? null,
+    business_type: data.business_type ?? data.business ?? data.type ?? null,
   };
 }
 
+/** 아이디 등록 */
 export async function registerUser(
   nickname: string,
   business_type: string,
   uuid?: string
 ): Promise<RegisterUserRes> {
-  const url = `/api/user`;
   const payload: any = { nickname, business_type };
   if (uuid) {
     payload.uuid = uuid;
-    payload.user_uuid = uuid; // 백엔드 호환
+    payload.user_uuid = uuid;
   }
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: jsonHeaders(),
-    body: JSON.stringify(payload),
-  });
+  try {
+    // ✅ DRF 대비: 트레일링 슬래시 추가
+    const data = await apiFetch<any>("/api/user/", {
+      method: "POST",
+      headers: jsonHeaders(),
+      body: JSON.stringify(payload),
+    });
 
-  // 400인데 "이미 존재" 메시지면 멱등 성공 처리
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    if (/already exists/i.test(text)) {
+    return {
+      success: !!(data.success ?? true),
+      uuid: data.uuid ?? data.user_uuid ?? uuid ?? "",
+      nickname: data.nickname ?? nickname,
+      business_type:
+        data.business_type ?? data.business ?? data.type ?? business_type,
+      created_at: data.created_at ?? new Date().toISOString(),
+    };
+  } catch (err: any) {
+    // 이미 존재 케이스 처리 유지
+    if (/already exists/i.test(err.message)) {
       const ck = await checkUserByUuid(uuid || "");
       return {
         success: true,
@@ -78,16 +97,7 @@ export async function registerUser(
         created_at: new Date().toISOString(),
       };
     }
-    throw new Error(`register failed (${res.status}): ${text}`);
+    console.error("[UserInfo] register error:", err);
+    throw err;
   }
-
-  const data = (await res.json()) as any;
-  return {
-    success: !!(data.success ?? true),
-    uuid: data.uuid ?? data.user_uuid ?? uuid ?? "",
-    nickname: data.nickname ?? nickname,
-    business_type:
-      data.business_type ?? data.business ?? data.type ?? business_type,
-    created_at: data.created_at ?? new Date().toISOString(),
-  };
 }
