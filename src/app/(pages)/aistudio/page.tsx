@@ -354,7 +354,8 @@ export default function AiStudioPage() {
     try {
       await saveGenerated(selectedGenerated.id);
       alert("저장되었습니다.");
-    } catch {
+    } catch (e: any) {
+      console.error("[SAVE] error:", e);
       alert("저장에 실패했습니다.");
     } finally {
       setLoading(false);

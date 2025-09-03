@@ -38,8 +38,6 @@ async function apiFetch<T>(path: string, init: RequestInit): Promise<T> {
 /** 기존 유저 확인 (명세: POST /api/user/check/ ) */
 export async function checkUserByUuid(uuid: string): Promise<CheckUserRes> {
   const payload = { uuid, user_uuid: uuid };
-
-  // check는 명세대로 트레일링 슬래시 유지
   const data = await apiFetch<any>("/api/user/check/", {
     method: "POST",
     headers: jsonHeaders(),
@@ -55,7 +53,7 @@ export async function checkUserByUuid(uuid: string): Promise<CheckUserRes> {
   };
 }
 
-/** 아이디 등록 (명세: POST /api/user — 슬래시 없음) */
+/** 아이디 등록 — ✅ 고정: POST /api/user/ */
 export async function registerUser(
   nickname: string,
   business_type: string,
@@ -67,57 +65,18 @@ export async function registerUser(
     payload.user_uuid = uuid;
   }
 
-  // 1차: /api/user  (명세 우선)
-  try {
-    const data = await apiFetch<any>("/api/user", {
-      method: "POST",
-      headers: jsonHeaders(),
-      body: JSON.stringify(payload),
-    });
+  const data = await apiFetch<any>("/api/user/", {
+    method: "POST",
+    headers: jsonHeaders(),
+    body: JSON.stringify(payload),
+  });
 
-    return {
-      success: !!(data.success ?? true),
-      uuid: data.uuid ?? data.user_uuid ?? uuid ?? "",
-      nickname: data.nickname ?? nickname,
-      business_type:
-        data.business_type ?? data.business ?? data.type ?? business_type,
-      created_at: data.created_at ?? new Date().toISOString(),
-    };
-  } catch (err: any) {
-    // 405 또는 404면 서버가 슬래시 버전만 받는 환경일 수 있으므로 폴백
-    if (/\(405\)|\(404\)/.test(err?.message || "")) {
-      console.warn(
-        "[registerUser] fallback to /api/user/ due to",
-        err?.message
-      );
-      const data = await apiFetch<any>("/api/user/", {
-        method: "POST",
-        headers: jsonHeaders(),
-        body: JSON.stringify(payload),
-      });
-      return {
-        success: !!(data.success ?? true),
-        uuid: data.uuid ?? data.user_uuid ?? uuid ?? "",
-        nickname: data.nickname ?? nickname,
-        business_type:
-          data.business_type ?? data.business ?? data.type ?? business_type,
-        created_at: data.created_at ?? new Date().toISOString(),
-      };
-    }
-
-    // 이미 존재 케이스 구문 그대로 유지
-    if (/already exists/i.test(err.message)) {
-      const ck = await checkUserByUuid(uuid || "");
-      return {
-        success: true,
-        uuid: ck.uuid || uuid || "",
-        nickname,
-        business_type,
-        created_at: new Date().toISOString(),
-      };
-    }
-
-    console.error("[UserInfo] register error:", err);
-    throw err;
-  }
+  return {
+    success: !!(data.success ?? true),
+    uuid: data.uuid ?? data.user_uuid ?? uuid ?? "",
+    nickname: data.nickname ?? nickname,
+    business_type:
+      data.business_type ?? data.business ?? data.type ?? business_type,
+    created_at: data.created_at ?? new Date().toISOString(),
+  };
 }
